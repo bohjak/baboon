@@ -7,6 +7,7 @@ type Token struct {
 	Literal string
 }
 
+// TODO: adapt Odin syntax
 const (
 	ILLEGAL TokenType = "ILLEGAL"
 	EOF               = "EOF"

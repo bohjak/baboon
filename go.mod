@@ -1,3 +1,3 @@
-module github.com/bohjak/baboon
+module baboon
 
 go 1.19

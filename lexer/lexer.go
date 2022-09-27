@@ -1,7 +1,7 @@
 package lexer
 
 import (
-	"github.com/bohjak/baboon/token"
+	"baboon/token"
 )
 
 type Lexer struct {
@@ -21,6 +21,7 @@ func (l *Lexer) readChar() {
 	if l.readPosition >= len(l.input) {
 		l.ch = 0
 	} else {
+		// TODO: replace this with a Unicode aware parser
 		l.ch = l.input[l.readPosition]
 	}
 	l.position = l.readPosition
@@ -129,6 +130,7 @@ func isLetter(ch byte) bool {
 }
 
 func isDigit(ch byte) bool {
+	// TODO: expand to make work with floating point and non base-10 numbers
 	return '0' <= ch && ch <= '9'
 }
 
