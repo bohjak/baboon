@@ -2,6 +2,7 @@ package token
 
 type TokenType string
 
+// TODO: include line and column
 type Token struct {
 	Type    TokenType
 	Literal string

@@ -11,6 +11,7 @@ type Lexer struct {
 	ch           byte // current char under examination
 }
 
+// TODO: make work with a reader instead
 func New(input string) *Lexer {
 	l := &Lexer{input: input}
 	l.readChar()
