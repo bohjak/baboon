@@ -2,10 +2,11 @@ package token
 
 type TokenType string
 
-// TODO: include line and column
 type Token struct {
 	Type    TokenType
 	Literal string
+	Line    uint
+	Column  uint
 }
 
 // TODO: adapt Odin syntax

@@ -37,7 +37,8 @@ func (p *Parser) Errors() []string {
 }
 
 func (p *Parser) peekError(t token.TokenType) {
-	msg := fmt.Sprintf("expected next token to be %q, got %q instead", t, p.peekToken.Type)
+	pt := p.peekToken
+	msg := fmt.Sprintf("[%d:%d] expected next token to be %q, got %q instead", pt.Line, pt.Column, t, pt.Type)
 	p.errors = append(p.errors, msg)
 }
 
