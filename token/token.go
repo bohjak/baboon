@@ -5,8 +5,8 @@ type TokenType string
 type Token struct {
 	Type    TokenType
 	Literal string
-	Line    uint
-	Column  uint
+	Line    int
+	Column  int
 }
 
 // TODO: adapt Odin syntax

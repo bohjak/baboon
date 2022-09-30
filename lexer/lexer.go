@@ -2,15 +2,14 @@ package lexer
 
 import (
 	"baboon/token"
-	"fmt"
 )
 
 type Lexer struct {
 	input        string
 	position     int  // current position in input (current char)
 	readPosition int  // current reading position in input (after current char)
-	line         uint // current line position
-	column       uint // current position in line
+	line         int  // current line position
+	column       int  // current position in line
 	ch           byte // current char under examination
 }
 
@@ -35,8 +34,6 @@ func (l *Lexer) readChar() {
 
 func (l *Lexer) NextToken() token.Token {
 	var tok token.Token
-
-	fmt.Println("nexttoken", l.column)
 
 	l.skipWhitespace()
 
@@ -139,7 +136,6 @@ func (l *Lexer) readNumber() string {
 func (l *Lexer) skipWhitespace() {
 	for l.ch == ' ' || l.ch == '\t' || l.ch == '\n' || l.ch == '\r' {
 		if l.ch == '\n' {
-			fmt.Println("newline")
 			l.line += 1
 			l.column = 0
 		}

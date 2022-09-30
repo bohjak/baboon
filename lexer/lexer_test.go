@@ -164,8 +164,8 @@ return!`
 
 	tests := []struct {
 		expectedType string
-		expectedLine uint
-		expectedCol  uint
+		expectedLine int
+		expectedCol  int
 	}{
 		{token.IDENT, 1, 1},
 		{token.ASSIGN, 1, 12},
