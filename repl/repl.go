@@ -2,6 +2,7 @@ package repl
 
 import (
 	"baboon/lexer"
+	"baboon/parser"
 	"baboon/token"
 	"bufio"
 	"fmt"
@@ -9,6 +10,15 @@ import (
 )
 
 const PROMPT = ">> "
+
+const (
+	_ int = iota
+	LEXER
+	PARSER
+	EVAL
+)
+
+var mode int = PARSER
 
 func Start(in io.Reader, out io.Writer) {
 	scanner := bufio.NewScanner(in)
@@ -21,13 +31,34 @@ func Start(in io.Reader, out io.Writer) {
 		}
 
 		line := scanner.Text()
-		if line == "exit" {
+		switch line {
+		case "lexer":
+			mode = LEXER
+			fmt.Println("mode: LEXER")
+			continue
+		case "parser":
+			mode = PARSER
+			fmt.Println("mode: PARSER")
+			continue
+		case "exit":
 			return
 		}
-		l := lexer.New(line)
 
-		for tok := l.NextToken(); tok.Type != token.EOF; tok = l.NextToken() {
-			fmt.Printf("%+v\n", tok)
+		l := lexer.New(line)
+		switch mode {
+		case LEXER:
+			for tok := l.NextToken(); tok.Type != token.EOF; tok = l.NextToken() {
+				fmt.Printf("%+v\n", tok)
+			}
+		case PARSER:
+			p := parser.New(l)
+			program := p.ParseProgram()
+			if len(p.Errors()) > 0 {
+				for _, error := range p.Errors() {
+					fmt.Println(error)
+				}
+			}
+			fmt.Println(program.String())
 		}
 	}
 }
