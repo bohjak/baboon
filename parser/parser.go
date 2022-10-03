@@ -132,7 +132,6 @@ func (p *Parser) parseExpressionStatement() (*ast.ExpressionStatement, bool) {
 
 	stmt.Expression = p.parseExpression(LOWEST)
 
-	// TODO: optional semicolon - get rid of semicolons altogether
 	if p.peekToken.Type == token.SEMICOLON {
 		p.nextToken()
 	}
@@ -148,7 +147,7 @@ func (p *Parser) parseExpression(precedence int) ast.Expression {
 	}
 	leftExp := prefix()
 
-	for (p.peekToken.Type != token.SEMICOLON) && precedence < p.peekPrecedence() {
+	for p.peekToken.Type != token.SEMICOLON && p.peekToken.Type != token.EOL && precedence < p.peekPrecedence() {
 		infix := p.infixParseFns[p.peekToken.Type]
 		if infix == nil {
 			return leftExp

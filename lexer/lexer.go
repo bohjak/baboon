@@ -95,6 +95,11 @@ func (l *Lexer) NextToken() token.Token {
 	case '>':
 		tok.Type = token.GT
 		tok.Literal = string(l.ch)
+	case '\n':
+		l.line += 1
+		l.column = 0
+		tok.Type = token.EOL
+		tok.Literal = string(l.ch)
 	case 0:
 		tok.Literal = ""
 		tok.Type = token.EOF
@@ -134,11 +139,7 @@ func (l *Lexer) readNumber() string {
 }
 
 func (l *Lexer) skipWhitespace() {
-	for l.ch == ' ' || l.ch == '\t' || l.ch == '\n' || l.ch == '\r' {
-		if l.ch == '\n' {
-			l.line += 1
-			l.column = 0
-		}
+	for l.ch == ' ' || l.ch == '\t' || l.ch == '\r' {
 		l.readChar()
 	}
 }
