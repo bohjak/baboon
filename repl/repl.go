@@ -1,12 +1,13 @@
 package repl
 
 import (
-	"baboon/lexer"
-	"baboon/parser"
-	"baboon/token"
 	"bufio"
 	"fmt"
 	"io"
+
+	"baboon/lexer"
+	"baboon/parser"
+	"baboon/token"
 )
 
 const PROMPT = ">> "

@@ -72,8 +72,8 @@ func (p *Parser) ParseProgram() *ast.Program {
 	program.Statements = []ast.Statement{}
 
 	for !p.curTokenIs(token.EOF) {
-		stmt := p.parseStatement()
-		if stmt != nil {
+		stmt, ok := p.parseStatement()
+		if ok {
 			program.Statements = append(program.Statements, stmt)
 		}
 		p.nextToken()
@@ -82,7 +82,7 @@ func (p *Parser) ParseProgram() *ast.Program {
 	return program
 }
 
-func (p *Parser) parseStatement() ast.Statement {
+func (p *Parser) parseStatement() (ast.Statement, bool) {
 	switch p.curToken.Type {
 	case token.LET:
 		return p.parseLetStatement()
@@ -93,41 +93,41 @@ func (p *Parser) parseStatement() ast.Statement {
 	}
 }
 
-func (p *Parser) parseLetStatement() *ast.LetStatement {
+func (p *Parser) parseLetStatement() (*ast.LetStatement, bool) {
 	stmt := &ast.LetStatement{Token: p.curToken}
 
 	if !p.expectPeek(token.IDENT) {
-		return nil
+		return nil, false
 	}
 
 	stmt.Name = &ast.Identifier{Token: p.curToken, Value: p.curToken.Literal}
 
 	if !p.expectPeek(token.ASSIGN) {
-		return nil
+		return nil, false
 	}
 
 	// TODO: implement recursive expression parsing
-	for !p.curTokenIs(token.SEMICOLON) {
+	for p.curToken.Type != token.SEMICOLON && p.curToken.Type != token.EOF {
 		p.nextToken()
 	}
 
-	return stmt
+	return stmt, true
 }
 
-func (p *Parser) parseReturnStatement() *ast.ReturnStatement {
+func (p *Parser) parseReturnStatement() (*ast.ReturnStatement, bool) {
 	stmt := &ast.ReturnStatement{Token: p.curToken}
 
 	p.nextToken()
 
 	// TODO: implement expression parsing
-	for !p.curTokenIs(token.SEMICOLON) {
+	for p.curToken.Type != token.SEMICOLON && p.curToken.Type != token.EOF {
 		p.nextToken()
 	}
 
-	return stmt
+	return stmt, true
 }
 
-func (p *Parser) parseExpressionStatement() *ast.ExpressionStatement {
+func (p *Parser) parseExpressionStatement() (*ast.ExpressionStatement, bool) {
 	stmt := &ast.ExpressionStatement{Token: p.curToken}
 
 	stmt.Expression = p.parseExpression(LOWEST)
@@ -137,7 +137,7 @@ func (p *Parser) parseExpressionStatement() *ast.ExpressionStatement {
 		p.nextToken()
 	}
 
-	return stmt
+	return stmt, true
 }
 
 func (p *Parser) parseExpression(precedence int) ast.Expression {
