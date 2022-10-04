@@ -26,6 +26,8 @@ func New(l *lexer.Lexer) *Parser {
 	p.prefixParseFns = make(map[token.TokenType]prefixParseFn)
 	p.prefixParseFns[token.IDENT] = p.parseIdentifier
 	p.prefixParseFns[token.INT] = p.parseIntegerLiteral
+	p.prefixParseFns[token.TRUE] = p.parseBoolean
+	p.prefixParseFns[token.FALSE] = p.parseBoolean
 	p.prefixParseFns[token.BANG] = p.parsePrefixExpression
 	p.prefixParseFns[token.MINUS] = p.parsePrefixExpression
 
@@ -51,7 +53,7 @@ func (p *Parser) nextToken() {
 	p.peekToken = p.l.NextToken()
 }
 
-// TODO: I don't get the purpose of this function
+// Public getter
 func (p *Parser) Errors() []string {
 	return p.errors
 }
@@ -105,9 +107,16 @@ func (p *Parser) parseLetStatement() (*ast.LetStatement, bool) {
 	if !p.expectPeek(token.ASSIGN) {
 		return nil, false
 	}
+	p.nextToken()
 
-	// TODO: implement recursive expression parsing
-	for p.curToken.Type != token.SEMICOLON && p.curToken.Type != token.EOF {
+	value := p.parseExpression(LOWEST)
+	if value == nil {
+		return nil, false
+	}
+
+	stmt.Value = value
+
+	if p.peekToken.Type == token.SEMICOLON {
 		p.nextToken()
 	}
 
@@ -119,8 +128,14 @@ func (p *Parser) parseReturnStatement() (*ast.ReturnStatement, bool) {
 
 	p.nextToken()
 
-	// TODO: implement expression parsing
-	for p.curToken.Type != token.SEMICOLON && p.curToken.Type != token.EOF {
+	value := p.parseExpression(LOWEST)
+	if value == nil {
+		return nil, false
+	}
+
+	stmt.Value = value
+
+	if p.peekToken.Type == token.SEMICOLON {
 		p.nextToken()
 	}
 
@@ -132,7 +147,6 @@ func (p *Parser) parseExpressionStatement() (*ast.ExpressionStatement, bool) {
 
 	stmt.Expression = p.parseExpression(LOWEST)
 
-	// TODO: optional semicolon - get rid of semicolons altogether
 	if p.peekToken.Type == token.SEMICOLON {
 		p.nextToken()
 	}
@@ -180,6 +194,10 @@ func (p *Parser) parseIntegerLiteral() ast.Expression {
 	lit.Value = value
 
 	return lit
+}
+
+func (p *Parser) parseBoolean() ast.Expression {
+	return &ast.Boolean{Token: p.curToken, Value: p.curToken.Type == token.TRUE}
 }
 
 func (p *Parser) parsePrefixExpression() ast.Expression {
