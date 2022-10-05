@@ -24,6 +24,8 @@ var mode int = PARSER
 func Start(in io.Reader, out io.Writer) {
 	scanner := bufio.NewScanner(in)
 
+	fmt.Println("[RPPL Mode]")
+
 	for {
 		fmt.Printf(PROMPT)
 		scanned := scanner.Scan()
@@ -33,15 +35,20 @@ func Start(in io.Reader, out io.Writer) {
 
 		line := scanner.Text()
 		switch line {
-		case "lexer":
+		case "lex":
 			mode = LEXER
-			fmt.Println("mode: LEXER")
+			fmt.Println("[RLPL Mode]")
 			continue
-		case "parser":
+		case "parse":
 			mode = PARSER
-			fmt.Println("mode: PARSER")
+			fmt.Println("[RPPL Mode]")
+			continue
+		case "eval":
+			mode = EVAL
+			fmt.Println("[REPL Mode]")
 			continue
 		case "exit":
+			fmt.Println("[Exit]")
 			return
 		}
 
