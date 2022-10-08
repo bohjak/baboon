@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 
+	"baboon/evaluator"
 	"baboon/lexer"
 	"baboon/parser"
 	"baboon/token"
@@ -14,17 +15,17 @@ const PROMPT = ">> "
 
 const (
 	_ int = iota
-	LEXER
-	PARSER
+	LEX
+	PARSE
 	EVAL
 )
 
-var mode int = PARSER
+var mode int = EVAL
 
 func Start(in io.Reader, out io.Writer) {
 	scanner := bufio.NewScanner(in)
 
-	fmt.Println("[RPPL Mode]")
+	fmt.Println("[REPL Mode]")
 
 	for {
 		fmt.Printf(PROMPT)
@@ -36,11 +37,11 @@ func Start(in io.Reader, out io.Writer) {
 		line := scanner.Text()
 		switch line {
 		case "lex":
-			mode = LEXER
+			mode = LEX
 			fmt.Println("[RLPL Mode]")
 			continue
 		case "parse":
-			mode = PARSER
+			mode = PARSE
 			fmt.Println("[RPPL Mode]")
 			continue
 		case "eval":
@@ -54,19 +55,33 @@ func Start(in io.Reader, out io.Writer) {
 
 		l := lexer.New(line)
 		switch mode {
-		case LEXER:
+		case LEX:
 			for tok := l.NextToken(); tok.Type != token.EOF; tok = l.NextToken() {
 				fmt.Printf("%+v\n", tok)
 			}
-		case PARSER:
+		case PARSE:
 			p := parser.New(l)
 			program := p.ParseProgram()
-			if len(p.Errors()) > 0 {
-				for _, error := range p.Errors() {
-					fmt.Println(error)
-				}
-			}
+			printErrors(p.Errors())
 			fmt.Println(program.String())
+		case EVAL:
+			p := parser.New(l)
+			program := p.ParseProgram()
+			printErrors(p.Errors())
+			result := evaluator.Eval(program)
+			if result == nil {
+				fmt.Println("could not evaluate")
+			} else {
+				fmt.Println(result.Inspect())
+			}
+		}
+	}
+}
+
+func printErrors(errors []string) {
+	if len(errors) > 0 {
+		for _, error := range errors {
+			fmt.Println(error)
 		}
 	}
 }
