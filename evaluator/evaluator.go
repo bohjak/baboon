@@ -14,7 +14,9 @@ var (
 func Eval(node ast.Node) object.Object {
 	switch node := node.(type) {
 	case *ast.Program:
-		return evalStatements(node.Statements)
+		return evalProgram(node.Statements)
+	case *ast.BlockStatement:
+		return evalBlockStatement(node.Statements)
 	case *ast.ExpressionStatement:
 		return Eval(node.Expression)
 	case *ast.PrefixExpression:
@@ -39,7 +41,17 @@ func ObjectBoolean(value bool) *object.Boolean {
 	return FALSE
 }
 
-func evalStatements(stmts []ast.Statement) object.Object {
+func evalProgram(stmts []ast.Statement) object.Object {
+	var result object.Object
+
+	for _, stmt := range stmts {
+		result = Eval(stmt)
+	}
+
+	return result
+}
+
+func evalBlockStatement(stmts []ast.Statement) object.Object {
 	var result object.Object
 
 	for _, stmt := range stmts {
@@ -131,9 +143,9 @@ func evalIntegerExpression(op string, left object.Object, right object.Object) o
 
 func evalIfExpression(condition object.Object, consequence *ast.BlockStatement, alternative *ast.BlockStatement) object.Object {
 	if condition != FALSE && condition != NULL {
-		return evalStatements(consequence.Statements)
+		return Eval(consequence)
 	} else if alternative != nil {
-		return evalStatements(alternative.Statements)
+		return Eval(alternative)
 	} else {
 		return NULL
 	}

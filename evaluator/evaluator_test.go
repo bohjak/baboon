@@ -69,6 +69,28 @@ func TestEvalBangExpression(t *testing.T) {
 	}
 }
 
+func TestEvalIfExpression(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected interface{}
+	}{
+		{"if (true) {5}", 5},
+		{"if (false) {5}", nil},
+		{"if (true) {1} else {2}", 1},
+		{"if (false) {1} else {2}", 2},
+	}
+
+	for _, tt := range tests {
+		evaluated := testEval(tt.input)
+
+		if expected, ok := tt.expected.(int); ok {
+			testIntegerObject(t, evaluated, int64(expected))
+		} else {
+			testNullObject(t, evaluated)
+		}
+	}
+}
+
 func testEval(input string) object.Object {
 	l := lexer.New(input)
 	p := parser.New(l)
@@ -99,7 +121,16 @@ func testBooleanObject(t *testing.T, obj object.Object, expected bool) bool {
 	}
 
 	if result.Value != expected {
-		t.Errorf("object has wrong value, expected %t, got %t", expected, result.Value)
+		t.Errorf("object has wrong value, expected %T, got %T", expected, result.Value)
+		return false
+	}
+
+	return true
+}
+
+func testNullObject(t *testing.T, obj object.Object) bool {
+	if obj != NULL {
+		t.Errorf("object is not Null, got %T", obj)
 		return false
 	}
 
