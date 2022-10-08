@@ -91,6 +91,36 @@ func TestEvalIfExpression(t *testing.T) {
 	}
 }
 
+func TestReturnStatement(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected int64
+	}{
+		{"return 3", 3},
+		{"return 8 + 4", 12},
+		{"return 5; 9", 5},
+	}
+
+	for _, tt := range tests {
+		evaluated := testEval(tt.input)
+		testIntegerObject(t, evaluated, tt.expected)
+	}
+}
+
+func TestNestedBlockStatements(t *testing.T) {
+	input := `
+if (true) {
+	if (true) {
+		return 3;
+	}
+
+	return 4;
+}`
+
+	evaluated := testEval(input)
+	testIntegerObject(t, evaluated, 3)
+}
+
 func testEval(input string) object.Object {
 	l := lexer.New(input)
 	p := parser.New(l)
