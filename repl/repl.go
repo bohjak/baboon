@@ -22,13 +22,15 @@ const (
 
 var mode int = EVAL
 
+// TODO: implement history, persistent state, real-time eval, pretty printing?
 func Start(in io.Reader, out io.Writer) {
 	scanner := bufio.NewScanner(in)
 
 	fmt.Println("[REPL Mode]")
 
 	for {
-		fmt.Printf(PROMPT)
+		fmt.Printf("%s", PROMPT)
+
 		scanned := scanner.Scan()
 		if !scanned {
 			return

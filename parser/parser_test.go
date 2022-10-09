@@ -524,8 +524,6 @@ func testLetStatement(t *testing.T, s ast.Statement, name string) bool {
 		return false
 	}
 
-	// TODO: add test for value
-
 	return true
 }
 

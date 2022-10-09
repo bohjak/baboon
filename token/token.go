@@ -11,8 +11,8 @@ type Token struct {
 
 // TODO: adapt Odin syntax
 const (
-	ILLEGAL TokenType = "ILLEGAL"
-	EOF               = "EOF"
+	ILLEGAL = "ILLEGAL"
+	EOF     = "EOF"
 
 	// Identifier & Literals
 	IDENT = "IDENT"

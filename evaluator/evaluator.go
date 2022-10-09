@@ -37,7 +37,7 @@ func Eval(node ast.Node) object.Object {
 }
 
 func ObjectBoolean(value bool) *object.Boolean {
-	if value == true {
+	if value {
 		return TRUE
 	}
 	return FALSE
