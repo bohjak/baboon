@@ -3,6 +3,8 @@ package evaluator
 import (
 	"baboon/ast"
 	"baboon/object"
+	"baboon/token"
+	"fmt"
 )
 
 var (
@@ -22,9 +24,9 @@ func Eval(node ast.Node) object.Object {
 	case *ast.ReturnStatement:
 		return &object.Return{Value: Eval(node.Value)}
 	case *ast.PrefixExpression:
-		return evalPrefixExpression(node.Operator, Eval(node.Right))
+		return evalPrefixExpression(node.Operator, Eval(node.Right), node.Token)
 	case *ast.InfixExpression:
-		return evalInfixExpression(node.Operator, Eval(node.Left), Eval(node.Right))
+		return evalInfixExpression(node.Operator, Eval(node.Left), Eval(node.Right), node.Token)
 	case *ast.IfExpression:
 		return evalIfExpression(Eval(node.Condition), node.Consequence, node.Alternative)
 	case *ast.IntegerLiteral:
@@ -32,7 +34,7 @@ func Eval(node ast.Node) object.Object {
 	case *ast.Boolean:
 		return ObjectBoolean(node.Value)
 	default:
-		return nil
+		return &object.Error{Kind: "EVAL ERROR", Message: fmt.Sprintf("evaluation for %T node not handled", node)}
 	}
 }
 
@@ -48,6 +50,9 @@ func evalProgram(stmts []ast.Statement) object.Object {
 
 	for _, stmt := range stmts {
 		result = Eval(stmt)
+		if result.Type() == object.ERROR_OBJ {
+			return result
+		}
 		if result, ok := result.(*object.Return); ok {
 			return result.Value
 		}
@@ -61,7 +66,7 @@ func evalBlockStatement(stmts []ast.Statement) object.Object {
 
 	for _, stmt := range stmts {
 		result = Eval(stmt)
-		if result.Type() == object.RETURN_OBJ {
+		if result.Type() == object.RETURN_OBJ || result.Type() == object.ERROR_OBJ {
 			return result
 		}
 	}
@@ -69,19 +74,18 @@ func evalBlockStatement(stmts []ast.Statement) object.Object {
 	return result
 }
 
-func evalPrefixExpression(op string, right object.Object) object.Object {
+func evalPrefixExpression(op string, right object.Object, token token.Token) object.Object {
 	switch op {
 	case "!":
-		return evalBangExpression(right)
+		return evalBangExpression(right, token)
 	case "-":
-		return evalMinusPrefixExpression(right)
+		return evalMinusPrefixExpression(right, token)
 	default:
-		// TODO: should throw an error
-		return NULL
+		return &object.Error{Kind: "SYNTAX ERROR", Message: fmt.Sprintf("unexpected prefix operator %q", op), Line: token.Line, Column: token.Column}
 	}
 }
 
-func evalBangExpression(obj object.Object) object.Object {
+func evalBangExpression(obj object.Object, token token.Token) object.Object {
 	switch obj {
 	case TRUE:
 		return FALSE
@@ -90,35 +94,34 @@ func evalBangExpression(obj object.Object) object.Object {
 	case NULL:
 		return TRUE
 	default:
-		// FIXME: should throw or at least handle 0 as falsy
-		return FALSE
+		return &object.Error{Message: fmt.Sprintf("bang expression expected BOOLEAN | NULL, got %s", obj.Type()), Kind: "TYPE ERROR", Line: token.Line, Column: token.Column}
 	}
 }
 
-func evalMinusPrefixExpression(obj object.Object) object.Object {
+func evalMinusPrefixExpression(obj object.Object, token token.Token) object.Object {
 	if obj.Type() != object.INTEGER_OBJ {
-		// TODO: should throw
-		return NULL
+		return &object.Error{Message: fmt.Sprintf("minus prefix expression expected INTEGER, got %s", obj.Type()), Kind: "TYPE ERROR", Line: token.Line, Column: token.Column}
 	}
 
 	value := obj.(*object.Integer).Value
 	return &object.Integer{Value: -value}
 }
 
-func evalInfixExpression(op string, left object.Object, right object.Object) object.Object {
+func evalInfixExpression(op string, left object.Object, right object.Object, token token.Token) object.Object {
+	// TODO: add stricter type checking
 	switch {
 	case left.Type() == object.INTEGER_OBJ && right.Type() == object.INTEGER_OBJ:
-		return evalIntegerExpression(op, left, right)
+		return evalIntegerExpression(op, left, right, token)
 	case op == "==":
 		return ObjectBoolean(left == right)
 	case op == "!=":
 		return ObjectBoolean(left != right)
 	default:
-		return NULL
+		return &object.Error{Kind: "SYNTAX ERROR", Message: fmt.Sprintf("unexpected infix operator %q", op), Line: token.Line, Column: token.Column}
 	}
 }
 
-func evalIntegerExpression(op string, left object.Object, right object.Object) object.Object {
+func evalIntegerExpression(op string, left object.Object, right object.Object, token token.Token) object.Object {
 	leftVal := left.(*object.Integer).Value
 	rightVal := right.(*object.Integer).Value
 
@@ -144,8 +147,7 @@ func evalIntegerExpression(op string, left object.Object, right object.Object) o
 	case "!=":
 		return &object.Boolean{Value: leftVal != rightVal}
 	default:
-		// TODO: should throw
-		return NULL
+		return &object.Error{Kind: "SYNTAX ERROR", Message: fmt.Sprintf("unexpected integer infix operator %q", op), Line: token.Line, Column: token.Column}
 	}
 }
 

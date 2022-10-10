@@ -55,12 +55,8 @@ func TestEvalBangExpression(t *testing.T) {
 	}{
 		{"!true", false},
 		{"!false", true},
-		{"!2", false},
-		{"!0", false}, // FIXME: this definitely shouldn't be like this
 		{"!!true", true},
 		{"!!false", false},
-		{"!!2", true},
-		{"!!0", true},
 	}
 
 	for _, tt := range tests {
@@ -120,6 +116,8 @@ if (true) {
 	evaluated := testEval(input)
 	testIntegerObject(t, evaluated, 3)
 }
+
+/* HELPERS */
 
 func testEval(input string) object.Object {
 	l := lexer.New(input)

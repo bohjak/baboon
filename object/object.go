@@ -38,13 +38,14 @@ func (n *Null) Inspect() string  { return "null" }
 
 type Error struct {
 	Message string
+	Kind    string
 	Line    int
 	Column  int
 }
 
 func (e *Error) Type() ObjectType { return ERROR_OBJ }
 func (e *Error) Inspect() string {
-	return fmt.Sprintf("[%d:%d] error: %q", e.Line, e.Column, e.Message)
+	return fmt.Sprintf("[%d:%d] %s: %q", e.Line, e.Column, e.Kind, e.Message)
 }
 
 type Return struct {
