@@ -54,17 +54,19 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 	case *ast.Boolean:
 		return ObjectBoolean(node.Value)
 	case *ast.LetStatement:
-		// TODO: switch to lazy evaluation
+		if _, ok := env.Get(node.Name.Value); ok {
+			return &object.Error{Message: fmt.Sprintf("identifier already assigned: %s", node.Name.Value), Line: node.Token.Line, Column: node.Token.Column}
+		}
+		// TODO: switch to lazy evaluation?
 		val := Eval(node.Value, env)
 		if val.Type() == object.ERROR_OBJ {
 			return val
 		}
-		env.Set(node.Name.Value, val)
-		return NULL
+		return env.Set(node.Name.Value, val)
 	case *ast.Identifier:
 		val, ok := env.Get(node.Value)
 		if !ok {
-			return &object.Error{Message: fmt.Sprintf("identifier not found: %s", node.Value)}
+			return &object.Error{Message: fmt.Sprintf("identifier not found: %s", node.Value), Line: node.Token.Line, Column: node.Token.Column}
 		}
 		return val
 	default:

@@ -128,6 +128,7 @@ func TestErrors(t *testing.T) {
 		{"true >= false", "unknown operator: BOOLEAN >= BOOLEAN"},
 		{"let a = if (true) {return -false}", "unknown operator: -BOOLEAN"},
 		{"foo", "identifier not found: foo"},
+		{"let a = 1; let a = 2", "identifier already assigned: a"},
 	}
 
 	for i, tt := range tests {
@@ -141,6 +142,7 @@ func TestBinding(t *testing.T) {
 		input    string
 		expected int64
 	}{
+		{"let a = 5;", 5},
 		{"let a = 5; a", 5},
 		{"let a = 6; let b = 6 * 6; b", 36},
 		{"let a = 3; let b = 4; a + b", 7},
