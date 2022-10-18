@@ -69,6 +69,23 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 			return &object.Error{Message: fmt.Sprintf("identifier not found: %s", node.Value), Line: node.Token.Line, Column: node.Token.Column}
 		}
 		return val
+	// TODO: add assignment
+	case *ast.FunctionExpression:
+		params := node.Parameters
+		body := node.Body
+		return &object.Function{Parameters: params, Body: body, Env: env}
+	case *ast.CallExpression:
+		fn := Eval(node.Function, env)
+		if fn.Type() == object.ERROR_OBJ {
+			return fn
+		}
+
+		args := evalExpressions(node.Arguments, env)
+		if len(args) == 1 && args[0].Type() == object.ERROR_OBJ {
+			return args[0]
+		}
+
+		return applyFunction(fn, args, node.Token)
 	default:
 		return &object.Error{Message: fmt.Sprintf("unknown node: [%T] %v", node, node)}
 	}
@@ -196,4 +213,43 @@ func evalIfExpression(condition object.Object, consequence *ast.BlockStatement, 
 	} else {
 		return NULL
 	}
+}
+
+func evalExpressions(expressions []ast.Expression, env *object.Environment) []object.Object {
+	res := []object.Object{}
+
+	for _, ex := range expressions {
+		val := Eval(ex, env)
+		if val.Type() == object.ERROR_OBJ {
+			return []object.Object{val}
+		} else {
+			res = append(res, val)
+		}
+	}
+
+	return res
+}
+
+func applyFunction(function object.Object, args []object.Object, token token.Token) object.Object {
+	fn, ok := function.(*object.Function)
+	if !ok {
+		return &object.Error{Message: fmt.Sprintf("not a function: %s", function.Type()), Line: token.Line, Column: token.Column}
+	}
+
+	extEnv := extendFnEnv(fn, args)
+	evaluated := Eval(fn.Body, extEnv)
+	if val, ok := evaluated.(*object.Return); ok {
+		return val.Value
+	}
+	return evaluated
+}
+
+func extendFnEnv(fn *object.Function, args []object.Object) *object.Environment {
+	env := object.NewEnclosedEnvironment(fn.Env)
+
+	for i, param := range fn.Parameters {
+		env.Set(param.Value, args[i])
+	}
+
+	return env
 }

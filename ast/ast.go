@@ -108,11 +108,9 @@ func (bs *BlockStatement) TokenLiteral() string { return bs.Token.Literal }
 func (bs *BlockStatement) String() string {
 	var out bytes.Buffer
 
-	out.WriteString("{ ")
 	for _, stmt := range bs.Statements {
 		out.WriteString(stmt.String())
 	}
-	out.WriteString(" }")
 
 	return out.String()
 }
@@ -200,12 +198,13 @@ func (ie *IfExpression) String() string {
 
 	out.WriteString("if (")
 	out.WriteString(ie.Condition.String())
-	out.WriteString(") ")
+	out.WriteString(") { ")
 	out.WriteString(ie.Consequence.String())
 	if ie.Alternative != nil {
-		out.WriteString(" else ")
+		out.WriteString(" } else { ")
 		out.WriteString(ie.Alternative.String())
 	}
+	out.WriteString(" }")
 
 	return out.String()
 }
@@ -228,8 +227,9 @@ func (fe *FunctionExpression) String() string {
 		}
 		out.WriteString(param.String())
 	}
-	out.WriteString(") ")
+	out.WriteString(") { ")
 	out.WriteString(fe.Body.String())
+	out.WriteString(" }")
 
 	return out.String()
 }

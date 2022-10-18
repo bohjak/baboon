@@ -113,7 +113,7 @@ if (true) {
 	}
 }
 
-func TestErrors(t *testing.T) {
+func TestError(t *testing.T) {
 	tests := []struct {
 		input    string
 		expected string
@@ -146,6 +146,42 @@ func TestBinding(t *testing.T) {
 		{"let a = 5; a", 5},
 		{"let a = 6; let b = 6 * 6; b", 36},
 		{"let a = 3; let b = 4; a + b", 7},
+	}
+
+	for i, tt := range tests {
+		evaluated := testEval(tt.input)
+		testIntegerObject(t, i, evaluated, tt.expected)
+	}
+}
+
+func TestFunctionExpression(t *testing.T) {
+	tests := []struct {
+		input          string
+		expectedParams []string
+		expectedBody   string
+	}{
+		{"fn(a){a * 2}", []string{"a"}, "(a * 2)"},
+		{"fn(foo, bar, baz) { foo + bar + baz }", []string{"foo", "bar", "baz"}, "((foo + bar) + baz)"},
+	}
+
+	for i, tt := range tests {
+		evaluated := testEval(tt.input)
+		testFunctionObject(t, i, evaluated, tt.expectedParams, tt.expectedBody)
+	}
+}
+
+func TestCallExpression(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected int64
+	}{
+		{"let id = fn(x) { x }; id(42)", 42},
+		{"let id = fn(x) { return x }; id(42)", 42},
+		{"let mul = fn(a, b) { a * b }; mul(3, 4)", 12},
+		{"let apply = fn(x, cb) { cb(x) }; let sqr = fn(n) { n * n }; apply(8, sqr)", 64},
+		{"let add = fn(a, b) { a + b }; add(add(1, 2), fn(n) {n / 2}(10))", 8},
+		{"let foo = 1; let bar = fn(foo) { foo + 2 }; bar(3)", 5},
+		{"let newAdder = fn(x) {fn(y) {x + y}}; let addTwo = newAdder(2); addTwo(8)", 10},
 	}
 
 	for i, tt := range tests {
@@ -215,6 +251,33 @@ func testErrorObject(t *testing.T, i int, obj object.Object, expected string) bo
 
 	if result.Message != expected {
 		t.Errorf("[%d] object has wrong message\nexpected:\t%q\ngot:\t\t%q", i, expected, result.Message)
+		return false
+	}
+
+	return true
+}
+
+func testFunctionObject(t *testing.T, i int, obj object.Object, expectedParams []string, expectedBody string) bool {
+	result, ok := obj.(*object.Function)
+	if !ok {
+		t.Errorf("[%d] object is not Function, got %T", i, obj)
+		return false
+	}
+
+	if len(result.Parameters) != len(expectedParams) {
+		t.Errorf("[%d] function has wrong number of parameters; expected %d, got %d", i, len(expectedParams), len(result.Parameters))
+		return false
+	}
+
+	for j, p := range expectedParams {
+		if p != result.Parameters[j].String() {
+			t.Errorf("[%d] function has wrong parameter number %d; expected %q, got %q", i, j, p, result.Parameters[j].String())
+			return false
+		}
+	}
+
+	if expectedBody != result.Body.String() {
+		t.Errorf("[%d] function has wrong body; expected %q, got %q", i, expectedBody, result.Body.String())
 		return false
 	}
 
