@@ -34,7 +34,7 @@ func Eval(node ast.Node) object.Object {
 	case *ast.Boolean:
 		return ObjectBoolean(node.Value)
 	default:
-		return &object.Error{Kind: "EVAL ERROR", Message: fmt.Sprintf("evaluation for %T node not handled", node)}
+		return &object.Error{Message: fmt.Sprintf("unknown node: %T", node)}
 	}
 }
 
@@ -81,7 +81,7 @@ func evalPrefixExpression(op string, right object.Object, token token.Token) obj
 	case "-":
 		return evalMinusPrefixExpression(right, token)
 	default:
-		return &object.Error{Kind: "SYNTAX ERROR", Message: fmt.Sprintf("unexpected prefix operator %q", op), Line: token.Line, Column: token.Column}
+		return &object.Error{Message: fmt.Sprintf("unknown operator: %s%s", op, right.Type()), Line: token.Line, Column: token.Column}
 	}
 }
 
@@ -94,13 +94,13 @@ func evalBangExpression(obj object.Object, token token.Token) object.Object {
 	case NULL:
 		return TRUE
 	default:
-		return &object.Error{Message: fmt.Sprintf("bang expression expected BOOLEAN | NULL, got %s", obj.Type()), Kind: "TYPE ERROR", Line: token.Line, Column: token.Column}
+		return &object.Error{Message: fmt.Sprintf("unknown operator: !%s", obj.Type()), Line: token.Line, Column: token.Column}
 	}
 }
 
 func evalMinusPrefixExpression(obj object.Object, token token.Token) object.Object {
 	if obj.Type() != object.INTEGER_OBJ {
-		return &object.Error{Message: fmt.Sprintf("minus prefix expression expected INTEGER, got %s", obj.Type()), Kind: "TYPE ERROR", Line: token.Line, Column: token.Column}
+		return &object.Error{Message: fmt.Sprintf("unknown operator: -%s", obj.Type()), Line: token.Line, Column: token.Column}
 	}
 
 	value := obj.(*object.Integer).Value
@@ -108,16 +108,17 @@ func evalMinusPrefixExpression(obj object.Object, token token.Token) object.Obje
 }
 
 func evalInfixExpression(op string, left object.Object, right object.Object, token token.Token) object.Object {
-	// TODO: add stricter type checking
 	switch {
 	case left.Type() == object.INTEGER_OBJ && right.Type() == object.INTEGER_OBJ:
 		return evalIntegerExpression(op, left, right, token)
+	case left.Type() != right.Type():
+		return &object.Error{Message: fmt.Sprintf("type mismatch: %s %s %s", left.Type(), op, right.Type()), Line: token.Line, Column: token.Column}
 	case op == "==":
 		return ObjectBoolean(left == right)
 	case op == "!=":
 		return ObjectBoolean(left != right)
 	default:
-		return &object.Error{Kind: "SYNTAX ERROR", Message: fmt.Sprintf("unexpected infix operator %q", op), Line: token.Line, Column: token.Column}
+		return &object.Error{Message: fmt.Sprintf("unknown operator: %s %s %s", left.Type(), op, right.Type()), Line: token.Line, Column: token.Column}
 	}
 }
 
@@ -147,7 +148,7 @@ func evalIntegerExpression(op string, left object.Object, right object.Object, t
 	case "!=":
 		return &object.Boolean{Value: leftVal != rightVal}
 	default:
-		return &object.Error{Kind: "SYNTAX ERROR", Message: fmt.Sprintf("unexpected integer infix operator %q", op), Line: token.Line, Column: token.Column}
+		return &object.Error{Message: fmt.Sprintf("unknown operator: %s %s %s", left.Type(), op, right.Type()), Line: token.Line, Column: token.Column}
 	}
 }
 

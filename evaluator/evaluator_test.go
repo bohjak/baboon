@@ -95,6 +95,15 @@ func TestReturnStatement(t *testing.T) {
 		{"return 3", 3},
 		{"return 8 + 4", 12},
 		{"return 5; 9", 5},
+		{`
+if (true) {
+	if (true) {
+		return 3;
+	}
+
+	return 4;
+}
+		`, 3},
 	}
 
 	for _, tt := range tests {
@@ -103,18 +112,22 @@ func TestReturnStatement(t *testing.T) {
 	}
 }
 
-func TestNestedBlockStatements(t *testing.T) {
-	input := `
-if (true) {
-	if (true) {
-		return 3;
+func TestErrors(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{"!0", "unknown operator: !INTEGER"},
+		{"-true", "unknown operator: -BOOLEAN"},
+		{"true + false", "unknown operator: BOOLEAN + BOOLEAN"},
+		{"0 < true", "type mismatch: INTEGER < BOOLEAN"},
+		{"true == 2; 4", "type mismatch: BOOLEAN == INTEGER"},
 	}
 
-	return 4;
-}`
-
-	evaluated := testEval(input)
-	testIntegerObject(t, evaluated, 3)
+	for _, tt := range tests {
+		evaluated := testEval(tt.input)
+		testErrorObject(t, evaluated, tt.expected)
+	}
 }
 
 /* HELPERS */
@@ -159,6 +172,21 @@ func testBooleanObject(t *testing.T, obj object.Object, expected bool) bool {
 func testNullObject(t *testing.T, obj object.Object) bool {
 	if obj != NULL {
 		t.Errorf("object is not Null, got %T", obj)
+		return false
+	}
+
+	return true
+}
+
+func testErrorObject(t *testing.T, obj object.Object, expected string) bool {
+	result, ok := obj.(*object.Error)
+	if !ok {
+		t.Errorf("object is not Error, got %T", obj)
+		return false
+	}
+
+	if result.Message != expected {
+		t.Errorf("object has wrong message\nexpected:\t%q\ngot:\t%q", expected, result.Message)
 		return false
 	}
 
