@@ -7,6 +7,7 @@ import (
 
 	"baboon/evaluator"
 	"baboon/lexer"
+	"baboon/object"
 	"baboon/parser"
 	"baboon/token"
 )
@@ -25,6 +26,7 @@ var mode int = EVAL
 // TODO: implement history, persistent state, real-time eval, pretty printing?
 func Start(in io.Reader, out io.Writer) {
 	scanner := bufio.NewScanner(in)
+	env := object.NewEnvironment()
 
 	fmt.Println("[REPL Mode]")
 
@@ -70,7 +72,7 @@ func Start(in io.Reader, out io.Writer) {
 			p := parser.New(l)
 			program := p.ParseProgram()
 			printErrors(p.Errors())
-			result := evaluator.Eval(program)
+			result := evaluator.Eval(program, env)
 			if result == nil {
 				fmt.Println("could not evaluate")
 			} else {
