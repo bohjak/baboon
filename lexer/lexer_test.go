@@ -7,7 +7,7 @@ import (
 )
 
 func TestNextTokenBasic(t *testing.T) {
-	input := `=+(){},;!-/*5<>`
+	input := `=+(){},;!-/*5<> ==<=>=`
 
 	tests := []struct {
 		expectedType    token.TokenType
@@ -28,6 +28,9 @@ func TestNextTokenBasic(t *testing.T) {
 		{token.INT, "5"},
 		{token.LT, "<"},
 		{token.GT, ">"},
+		{token.EQ, "=="},
+		{token.LEQ, "<="},
+		{token.GEQ, ">="},
 	}
 
 	l := New(input)
@@ -47,23 +50,27 @@ func TestNextTokenBasic(t *testing.T) {
 }
 
 func TestNextTokenComplex(t *testing.T) {
-	input := `let five = 5;
-	let ten = 10;
+	input := `
+let five = 5;
+let ten = 10;
 
-	let add = fn(x, y) {
-		x + y;
-	};
+let add = fn(x, y) {
+	x + y;
+};
 
-	let result = add(five, ten);
+let result = add(five, ten);
 
-	if (5 < 10) {
-		return true;
-	} else {
-		return false;
-	}
+if (5 < 10) {
+	return true;
+} else {
+	return false;
+}
 
-	10 == 10;
-	10 != 9;`
+10 == 10;
+10 != 9;
+10 <= 11;
+12 >= 11;
+	`
 
 	tests := []struct {
 		expectedType    token.TokenType
@@ -134,6 +141,15 @@ func TestNextTokenComplex(t *testing.T) {
 		{token.INT, "10"},
 		{token.NEQ, "!="},
 		{token.INT, "9"},
+		{token.SEMICOLON, ";"},
+
+		{token.INT, "10"},
+		{token.LEQ, "<="},
+		{token.INT, "11"},
+		{token.SEMICOLON, ";"},
+		{token.INT, "12"},
+		{token.GEQ, ">="},
+		{token.INT, "11"},
 		{token.SEMICOLON, ";"},
 
 		{token.EOF, ""},

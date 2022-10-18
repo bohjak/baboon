@@ -157,7 +157,7 @@ func (pe *PrefixExpression) String() string {
 }
 
 type InfixExpression struct {
-	Token    token.Token // operator token? FIXME
+	Token    token.Token // operator token
 	Left     Expression
 	Operator string
 	Right    Expression

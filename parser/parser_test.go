@@ -56,6 +56,8 @@ func TestInfixExpressions(t *testing.T) {
 		{"5 > 6;", 5, ">", 6},
 		{"5 == 6;", 5, "==", 6},
 		{"5 != 6;", 5, "!=", 6},
+		{"5 <= 6;", 5, "<=", 6},
+		{"5 >= 6;", 5, ">=", 6},
 	}
 
 	for _, tt := range infixTests {

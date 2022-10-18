@@ -43,6 +43,8 @@ func New(l *lexer.Lexer) *Parser {
 	p.infixParseFns[token.NEQ] = p.parseInfixExpression
 	p.infixParseFns[token.LT] = p.parseInfixExpression
 	p.infixParseFns[token.GT] = p.parseInfixExpression
+	p.infixParseFns[token.LEQ] = p.parseInfixExpression
+	p.infixParseFns[token.GEQ] = p.parseInfixExpression
 	p.infixParseFns[token.LPAREN] = p.parseCallExpression
 
 	// Read two tokens to set both curToken and peekToken
@@ -416,6 +418,8 @@ var precedences = map[token.TokenType]int{
 	token.NEQ:      EQUALS,
 	token.LT:       LESSGREATER,
 	token.GT:       LESSGREATER,
+	token.LEQ:      LESSGREATER,
+	token.GEQ:      LESSGREATER,
 	token.PLUS:     SUM,
 	token.MINUS:    SUM,
 	token.SLASH:    PRODUCT,
