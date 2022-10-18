@@ -122,6 +122,8 @@ func TestErrors(t *testing.T) {
 		{"true + false", "unknown operator: BOOLEAN + BOOLEAN"},
 		{"0 < true", "type mismatch: INTEGER < BOOLEAN"},
 		{"true == 2; 4", "type mismatch: BOOLEAN == INTEGER"},
+		{"3 - true + 4", "type mismatch: INTEGER - BOOLEAN"},
+		{"if (!!1) {true}", "unknown operator: !INTEGER"},
 	}
 
 	for _, tt := range tests {
@@ -186,7 +188,7 @@ func testErrorObject(t *testing.T, obj object.Object, expected string) bool {
 	}
 
 	if result.Message != expected {
-		t.Errorf("object has wrong message\nexpected:\t%q\ngot:\t%q", expected, result.Message)
+		t.Errorf("object has wrong message\nexpected:\t%q\ngot:\t\t%q", expected, result.Message)
 		return false
 	}
 

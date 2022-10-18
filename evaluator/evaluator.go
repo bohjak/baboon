@@ -22,13 +22,33 @@ func Eval(node ast.Node) object.Object {
 	case *ast.ExpressionStatement:
 		return Eval(node.Expression)
 	case *ast.ReturnStatement:
-		return &object.Return{Value: Eval(node.Value)}
+		val := Eval(node.Value)
+		if val.Type() == object.ERROR_OBJ {
+			return val
+		}
+		return &object.Return{Value: val}
 	case *ast.PrefixExpression:
-		return evalPrefixExpression(node.Operator, Eval(node.Right), node.Token)
+		right := Eval(node.Right)
+		if right.Type() == object.ERROR_OBJ {
+			return right
+		}
+		return evalPrefixExpression(node.Operator, right, node.Token)
 	case *ast.InfixExpression:
-		return evalInfixExpression(node.Operator, Eval(node.Left), Eval(node.Right), node.Token)
+		left := Eval(node.Left)
+		if left.Type() == object.ERROR_OBJ {
+			return left
+		}
+		right := Eval(node.Right)
+		if right.Type() == object.ERROR_OBJ {
+			return right
+		}
+		return evalInfixExpression(node.Operator, left, right, node.Token)
 	case *ast.IfExpression:
-		return evalIfExpression(Eval(node.Condition), node.Consequence, node.Alternative)
+		cond := Eval(node.Condition)
+		if cond.Type() == object.ERROR_OBJ {
+			return cond
+		}
+		return evalIfExpression(cond, node.Consequence, node.Alternative)
 	case *ast.IntegerLiteral:
 		return &object.Integer{Value: node.Value}
 	case *ast.Boolean:
@@ -50,10 +70,10 @@ func evalProgram(stmts []ast.Statement) object.Object {
 
 	for _, stmt := range stmts {
 		result = Eval(stmt)
-		if result.Type() == object.ERROR_OBJ {
+		switch result := result.(type) {
+		case *object.Error:
 			return result
-		}
-		if result, ok := result.(*object.Return); ok {
+		case *object.Return:
 			return result.Value
 		}
 	}
