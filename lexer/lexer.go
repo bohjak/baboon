@@ -2,6 +2,8 @@ package lexer
 
 import (
 	"baboon/token"
+	"unicode"
+	"unicode/utf8"
 )
 
 type Lexer struct {
@@ -10,7 +12,7 @@ type Lexer struct {
 	readPosition int  // current reading position in input (after current char)
 	line         int  // current line position
 	column       int  // current position in line
-	ch           byte // current char under examination
+	ch           rune // current char under examination
 }
 
 func New(input string) *Lexer {
@@ -22,13 +24,29 @@ func New(input string) *Lexer {
 func (l *Lexer) readChar() {
 	if l.readPosition >= len(l.input) {
 		l.ch = 0
+		l.position += 1
 	} else {
-		// TODO: replace this with a Unicode aware parser
-		l.ch = l.input[l.readPosition]
+		r, size := utf8.DecodeRuneInString(l.input[l.readPosition:])
+		if r == utf8.RuneError {
+			l.ch = 0
+		}
+		l.ch = r
+		l.position = l.readPosition
+		l.readPosition += size
 	}
-	l.position = l.readPosition
-	l.readPosition += 1
 	l.column += 1
+}
+
+func (l *Lexer) peekChar() rune {
+	if l.readPosition >= len(l.input) {
+		return 0
+	} else {
+		r, _ := utf8.DecodeRuneInString(l.input[l.readPosition:])
+		if r == utf8.RuneError {
+			return 0
+		}
+		return r
+	}
 }
 
 func (l *Lexer) NextToken() token.Token {
@@ -130,7 +148,7 @@ func (l *Lexer) NextToken() token.Token {
 
 func (l *Lexer) readIdentifier() string {
 	start := l.position
-	for isLetter(l.ch) {
+	for isIdentifier(l.ch) {
 		l.readChar()
 	}
 	return l.input[start:l.position]
@@ -154,19 +172,16 @@ func (l *Lexer) skipWhitespace() {
 	}
 }
 
-func (l *Lexer) peekChar() byte {
-	if l.readPosition >= len(l.input) {
-		return 0
-	} else {
-		return l.input[l.readPosition]
-	}
-}
-
-func isLetter(ch byte) bool {
+func isLetter(ch rune) bool {
 	return 'a' <= ch && ch <= 'z' || 'A' <= ch && ch <= 'Z' || ch == '_'
+	// return unicode.IsLetter(ch) || ch == '_'
 }
 
-func isDigit(ch byte) bool {
+func isDigit(ch rune) bool {
 	// TODO: expand to make work with floating point and non base-10 numbers
-	return '0' <= ch && ch <= '9'
+	return unicode.IsDigit(ch)
+}
+
+func isIdentifier(ch rune) bool {
+	return isLetter(ch) || isDigit(ch) || ch == '-'
 }

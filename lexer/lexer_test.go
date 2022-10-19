@@ -203,3 +203,39 @@ return!`
 		}
 	}
 }
+
+func TestUnicode(t *testing.T) {
+	tests := []struct {
+		input        string
+		expectedType token.TokenType
+		expectedLit  string
+	}{
+		// {"৩", token.INT, "৩"},
+		{"foo", token.IDENT, "foo"},
+		// {"_abc123-৩", token.IDENT, "_abc123-৩"},
+		// {"var﷽﷽﷽﷽﷽﷽﷽﷽﷽", token.IDENT, "var﷽﷽﷽﷽﷽﷽﷽﷽﷽"},
+		// {"emoji🧟‍♀️🧟‍♂️", token.IDENT, "emoji🧟‍♀️🧟‍♂️"},
+	}
+
+	for i, tt := range tests {
+		l := New(tt.input)
+		tok := l.NextToken()
+		testToken(t, i, tok, tt.expectedType, tt.expectedLit)
+	}
+}
+
+/* HELPERS */
+
+func testToken(t *testing.T, i int, tok token.Token, expType token.TokenType, expLit string) bool {
+	if tok.Type != expType {
+		t.Errorf("token is of wrong type; expected %s, got %s", expType, tok.Type)
+		return false
+	}
+
+	if tok.Literal != expLit {
+		t.Errorf("token has wrong literal; expected %q, got %q", expLit, tok.Literal)
+		return false
+	}
+
+	return true
+}
