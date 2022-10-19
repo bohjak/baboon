@@ -2,6 +2,7 @@ package evaluator
 
 import (
 	"fmt"
+	"strings"
 
 	"baboon/object"
 	"baboon/token"
@@ -23,6 +24,18 @@ var builtins = map[string]*object.Builtin{
 			}
 
 			return &object.Integer{Value: int64(len(s.Value))}
+		},
+	},
+
+	"print": {
+		Fn: func(_ token.Token, args ...object.Object) object.Object {
+			out := []string{}
+			for _, arg := range args {
+				out = append(out, arg.Inspect())
+			}
+			fmt.Println(strings.Join(out, " "))
+			// TODO: add void?
+			return NULL
 		},
 	},
 }
