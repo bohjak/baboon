@@ -51,6 +51,8 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 		return evalIfExpression(cond, node.Consequence, node.Alternative, env)
 	case *ast.IntegerLiteral:
 		return &object.Integer{Value: node.Value}
+	case *ast.StringLiteral:
+		return &object.String{Value: node.Value}
 	case *ast.Boolean:
 		return ObjectBoolean(node.Value)
 	case *ast.LetStatement:
@@ -164,6 +166,8 @@ func evalInfixExpression(op string, left object.Object, right object.Object, tok
 	switch {
 	case left.Type() == object.INTEGER_OBJ && right.Type() == object.INTEGER_OBJ:
 		return evalIntegerExpression(op, left, right, token)
+	case left.Type() == object.STRING_OBJ && right.Type() == object.STRING_OBJ:
+		return evalStringExpression(op, left, right, token)
 	case left.Type() != right.Type():
 		return &object.Error{Message: fmt.Sprintf("type mismatch: %s %s %s", left.Type(), op, right.Type()), Line: token.Line, Column: token.Column}
 	case op == "==":
@@ -196,6 +200,22 @@ func evalIntegerExpression(op string, left object.Object, right object.Object, t
 		return &object.Boolean{Value: leftVal <= rightVal}
 	case ">=":
 		return &object.Boolean{Value: leftVal >= rightVal}
+	case "==":
+		return &object.Boolean{Value: leftVal == rightVal}
+	case "!=":
+		return &object.Boolean{Value: leftVal != rightVal}
+	default:
+		return &object.Error{Message: fmt.Sprintf("unknown operator: %s %s %s", left.Type(), op, right.Type()), Line: token.Line, Column: token.Column}
+	}
+}
+
+func evalStringExpression(op string, left object.Object, right object.Object, token token.Token) object.Object {
+	leftVal := left.(*object.String).Value
+	rightVal := right.(*object.String).Value
+
+	switch op {
+	case "+":
+		return &object.String{Value: leftVal + rightVal}
 	case "==":
 		return &object.Boolean{Value: leftVal == rightVal}
 	case "!=":

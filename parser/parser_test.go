@@ -28,10 +28,7 @@ func TestOperatorPrecedence(t *testing.T) {
 	}
 
 	for i, tt := range tests {
-		l := lexer.New(tt.input)
-		p := New(l)
-		program := p.ParseProgram()
-		checkParserErrors(t, p)
+		program := testParse(t, tt.input)
 
 		actual := program.String()
 
@@ -61,10 +58,7 @@ func TestInfixExpressions(t *testing.T) {
 	}
 
 	for _, tt := range infixTests {
-		l := lexer.New(tt.input)
-		p := New(l)
-		program := p.ParseProgram()
-		checkParserErrors(t, p)
+		program := testParse(t, tt.input)
 
 		assertStatementsLen(t, program.Statements, 1)
 
@@ -87,10 +81,7 @@ func TestPrefixExpressions(t *testing.T) {
 	}
 
 	for _, tt := range prefixTests {
-		l := lexer.New(tt.input)
-		p := New(l)
-		program := p.ParseProgram()
-		checkParserErrors(t, p)
+		program := testParse(t, tt.input)
 
 		assertStatementsLen(t, program.Statements, 1)
 
@@ -114,10 +105,7 @@ func TestPrefixExpressions(t *testing.T) {
 func TestIntegerLiteralExpression(t *testing.T) {
 	input := "5;"
 
-	l := lexer.New(input)
-	p := New(l)
-	program := p.ParseProgram()
-	checkParserErrors(t, p)
+	program := testParse(t, input)
 
 	assertStatementsLen(t, program.Statements, 1)
 
@@ -128,13 +116,20 @@ func TestIntegerLiteralExpression(t *testing.T) {
 	}
 }
 
+func TestStringLiteralExpression(t *testing.T) {
+	input := "\"Hello, World!\""
+
+	program := testParse(t, input)
+
+	assertStatementsLen(t, program.Statements, 1)
+	stmt := assertExpressionStatement(t, program.Statements[0])
+	testStringLiteral(t, stmt.Expression, "Hello, World!")
+}
+
 func TestIdentifierExpression(t *testing.T) {
 	input := "foobar;"
 
-	l := lexer.New(input)
-	p := New(l)
-	program := p.ParseProgram()
-	checkParserErrors(t, p)
+	program := testParse(t, input)
 
 	assertStatementsLen(t, program.Statements, 1)
 
@@ -155,10 +150,7 @@ func TestBooleanExpressions(t *testing.T) {
 	}
 
 	for _, tt := range boolTests {
-		l := lexer.New(tt.input)
-		p := New(l)
-		program := p.ParseProgram()
-		checkParserErrors(t, p)
+		program := testParse(t, tt.input)
 
 		assertStatementsLen(t, program.Statements, 1)
 
@@ -173,10 +165,7 @@ func TestBooleanExpressions(t *testing.T) {
 func TestIfExpression(t *testing.T) {
 	input := `if (x < y) { x }`
 
-	l := lexer.New(input)
-	p := New(l)
-	program := p.ParseProgram()
-	checkParserErrors(t, p)
+	program := testParse(t, input)
 
 	assertStatementsLen(t, program.Statements, 1)
 
@@ -207,10 +196,7 @@ func TestIfExpression(t *testing.T) {
 func TestIfElseExpression(t *testing.T) {
 	input := `if (x < y) { x } else { y }`
 
-	l := lexer.New(input)
-	p := New(l)
-	program := p.ParseProgram()
-	checkParserErrors(t, p)
+	program := testParse(t, input)
 
 	assertStatementsLen(t, program.Statements, 1)
 
@@ -249,10 +235,7 @@ func TestIfElseExpression(t *testing.T) {
 func TestFunctionExpression(t *testing.T) {
 	input := `fn(x, y) { x + y; }`
 
-	l := lexer.New(input)
-	p := New(l)
-	program := p.ParseProgram()
-	checkParserErrors(t, p)
+	program := testParse(t, input)
 
 	assertStatementsLen(t, program.Statements, 1)
 
@@ -288,10 +271,7 @@ func TestFunctionParameters(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		l := lexer.New(tt.input)
-		p := New(l)
-		program := p.ParseProgram()
-		checkParserErrors(t, p)
+		program := testParse(t, tt.input)
 
 		assertStatementsLen(t, program.Statements, 1)
 		stmt := assertExpressionStatement(t, program.Statements[0])
@@ -314,10 +294,7 @@ func TestFunctionParameters(t *testing.T) {
 func TestCallExpression(t *testing.T) {
 	input := "add(1, 2 * 3, 4 + 5);"
 
-	l := lexer.New(input)
-	p := New(l)
-	program := p.ParseProgram()
-	checkParserErrors(t, p)
+	program := testParse(t, input)
 
 	assertStatementsLen(t, program.Statements, 1)
 	stmt := assertExpressionStatement(t, program.Statements[0])
@@ -351,10 +328,7 @@ func TestReturnStatements(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		l := lexer.New(tt.input)
-		p := New(l)
-		program := p.ParseProgram()
-		checkParserErrors(t, p)
+		program := testParse(t, tt.input)
 
 		assertStatementsLen(t, program.Statements, 1)
 
@@ -387,10 +361,7 @@ func TestLetStatements(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		l := lexer.New(tt.input)
-		p := New(l)
-		program := p.ParseProgram()
-		checkParserErrors(t, p)
+		program := testParse(t, tt.input)
 
 		assertStatementsLen(t, program.Statements, 1)
 
@@ -404,6 +375,16 @@ func TestLetStatements(t *testing.T) {
 			return
 		}
 	}
+}
+
+/* HELPERS */
+
+func testParse(t *testing.T, input string) *ast.Program {
+	l := lexer.New(input)
+	p := New(l)
+	program := p.ParseProgram()
+	checkParserErrors(t, p)
+	return program
 }
 
 func checkParserErrors(t *testing.T, p *Parser) {
@@ -488,6 +469,21 @@ func testBoolean(t *testing.T, exp ast.Expression, value bool) bool {
 
 	if boolean.Token.Literal != fmt.Sprint(value) {
 		t.Errorf("boolean.Token.Literal not %q, got %q", fmt.Sprint(value), boolean.Token.Literal)
+		return false
+	}
+
+	return true
+}
+
+func testStringLiteral(t *testing.T, exp ast.Expression, value string) bool {
+	strLit, ok := exp.(*ast.StringLiteral)
+	if !ok {
+		t.Errorf("exp not ast.StringLiteral, got %T", exp)
+		return false
+	}
+
+	if strLit.Value != value {
+		t.Errorf("exp has wrong value; expected %q, got %q", value, strLit.Value)
 		return false
 	}
 

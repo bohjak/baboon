@@ -45,6 +45,7 @@ func (l *Lexer) peekChar() rune {
 	if l.readPosition >= len(l.input) {
 		return 0
 	} else {
+		// TODO: cache result
 		r, _ := utf8.DecodeRuneInString(l.input[l.readPosition:])
 		if r == utf8.RuneError {
 			return 0
@@ -128,6 +129,9 @@ func (l *Lexer) NextToken() token.Token {
 			tok.Type = token.GT
 			tok.Literal = string(l.ch)
 		}
+	case '"':
+		tok.Literal = l.readString()
+		tok.Type = token.STRING
 	case 0:
 		tok.Literal = ""
 		tok.Type = token.EOF
@@ -161,6 +165,16 @@ func (l *Lexer) readIdentifier() string {
 func (l *Lexer) readNumber() string {
 	start := l.position
 	for isDigit(l.ch) {
+		l.readChar()
+	}
+	return l.input[start:l.position]
+}
+
+func (l *Lexer) readString() string {
+	l.readChar() // eat "
+	start := l.position
+	// TODO: add support for character escape sequences (\")
+	for l.ch != '"' && l.ch != 0 {
 		l.readChar()
 	}
 	return l.input[start:l.position]

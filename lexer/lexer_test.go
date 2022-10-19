@@ -58,7 +58,7 @@ let add = fn(x, y) {
 	x + y;
 };
 
-let result = add(five, ten);
+let result = add("five", ten);
 
 if (5 < 10) {
 	return true;
@@ -110,7 +110,7 @@ if (5 < 10) {
 		{token.ASSIGN, "="},
 		{token.IDENT, "add"},
 		{token.LPAREN, "("},
-		{token.IDENT, "five"},
+		{token.STRING, "five"},
 		{token.COMMA, ","},
 		{token.IDENT, "ten"},
 		{token.RPAREN, ")"},
@@ -220,6 +220,22 @@ func TestUnicode(t *testing.T) {
 		l := New(tt.input)
 		tok := l.NextToken()
 		testToken(t, i, tok, tt.expectedType, tt.expectedLit)
+	}
+}
+
+func TestString(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{"\"hello\"", "hello"},
+		{"\"what a == wonderfully!, spacious: sentence\"", "what a == wonderfully!, spacious: sentence"},
+	}
+
+	for i, tt := range tests {
+		l := New(tt.input)
+		tok := l.NextToken()
+		testToken(t, i, tok, token.STRING, tt.expected)
 	}
 }
 
