@@ -209,6 +209,31 @@ func TestCallExpression(t *testing.T) {
 	}
 }
 
+func TestBuiltin(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected interface{}
+	}{
+		{`len("123456")`, 6},
+		{`len("৩")`, 3},
+		{`len("šíleně žluťoučký ৩æ")`, 29},
+		{`len(42)`, "invalid argument: len(INTEGER)"},
+		{`len("abc", "def")`, "too many arguments for len: expected 1, found 2"},
+		{`len()`, "not enough arguments for len: expected 1, found 0"},
+	}
+
+	for i, tt := range tests {
+		eval := testEval(tt.input)
+
+		switch e := tt.expected.(type) {
+		case int:
+			testIntegerObject(t, i, eval, int64(e))
+		case string:
+			testErrorObject(t, i, eval, e)
+		}
+	}
+}
+
 /* HELPERS */
 
 func testEval(input string) object.Object {

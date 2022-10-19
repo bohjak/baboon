@@ -66,11 +66,13 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 		}
 		return env.Set(node.Name.Value, val)
 	case *ast.Identifier:
-		val, ok := env.Get(node.Value)
-		if !ok {
-			return &object.Error{Message: fmt.Sprintf("identifier not found: %s", node.Value), Line: node.Token.Line, Column: node.Token.Column}
+		if val, ok := env.Get(node.Value); ok {
+			return val
 		}
-		return val
+		if builtin, ok := builtins[node.Value]; ok {
+			return builtin
+		}
+		return &object.Error{Message: fmt.Sprintf("identifier not found: %s", node.Value), Line: node.Token.Line, Column: node.Token.Column}
 	// TODO: add assignment
 	case *ast.FunctionExpression:
 		params := node.Parameters
@@ -250,18 +252,20 @@ func evalExpressions(expressions []ast.Expression, env *object.Environment) []ob
 	return res
 }
 
-func applyFunction(function object.Object, args []object.Object, token token.Token) object.Object {
-	fn, ok := function.(*object.Function)
-	if !ok {
-		return &object.Error{Message: fmt.Sprintf("not a function: %s", function.Type()), Line: token.Line, Column: token.Column}
+func applyFunction(fn object.Object, args []object.Object, token token.Token) object.Object {
+	switch fn := fn.(type) {
+	case *object.Function:
+		extEnv := extendFnEnv(fn, args)
+		evaluated := Eval(fn.Body, extEnv)
+		if val, ok := evaluated.(*object.Return); ok {
+			return val.Value
+		}
+		return evaluated
+	case *object.Builtin:
+		return fn.Fn(token, args...)
+	default:
+		return &object.Error{Message: fmt.Sprintf("not a function: %s", fn.Type()), Line: token.Line, Column: token.Column}
 	}
-
-	extEnv := extendFnEnv(fn, args)
-	evaluated := Eval(fn.Body, extEnv)
-	if val, ok := evaluated.(*object.Return); ok {
-		return val.Value
-	}
-	return evaluated
 }
 
 func extendFnEnv(fn *object.Function, args []object.Object) *object.Environment {
