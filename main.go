@@ -1,18 +1,17 @@
 package main
 
 import (
+	"baboon/cli"
 	"baboon/repl"
 	"fmt"
 	"os"
-	"os/user"
 )
 
 func main() {
-	user, err := user.Current()
-	if err != nil {
-		panic(err)
+	if len(os.Args) > 1 {
+		cli.Run(os.Args)
+	} else {
+		fmt.Println("Baboon Interactive Environment")
+		repl.Start(os.Stdin, os.Stdout)
 	}
-
-	fmt.Printf("Hello %s! This is the Baboon programming language!\n", user.Username)
-	repl.Start(os.Stdin, os.Stdout)
 }
