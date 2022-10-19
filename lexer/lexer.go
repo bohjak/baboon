@@ -1,9 +1,10 @@
 package lexer
 
 import (
-	"baboon/token"
 	"unicode"
 	"unicode/utf8"
+
+	"baboon/token"
 )
 
 type Lexer struct {
@@ -24,13 +25,16 @@ func New(input string) *Lexer {
 func (l *Lexer) readChar() {
 	if l.readPosition >= len(l.input) {
 		l.ch = 0
-		l.position += 1
+		l.position = l.readPosition
+		l.readPosition += 1
 	} else {
 		r, size := utf8.DecodeRuneInString(l.input[l.readPosition:])
+
 		if r == utf8.RuneError {
 			l.ch = 0
+		} else {
+			l.ch = r
 		}
-		l.ch = r
 		l.position = l.readPosition
 		l.readPosition += size
 	}
@@ -173,13 +177,14 @@ func (l *Lexer) skipWhitespace() {
 }
 
 func isLetter(ch rune) bool {
-	return 'a' <= ch && ch <= 'z' || 'A' <= ch && ch <= 'Z' || ch == '_'
-	// return unicode.IsLetter(ch) || ch == '_'
+	// TODO: add support for emoji?
+	return unicode.IsLetter(ch) || ch == '_'
 }
 
 func isDigit(ch rune) bool {
 	// TODO: expand to make work with floating point and non base-10 numbers
-	return unicode.IsDigit(ch)
+	// parseInt cannot parse unicode numbers
+	return ch >= '0' && ch <= '9'
 }
 
 func isIdentifier(ch rune) bool {

@@ -210,11 +210,10 @@ func TestUnicode(t *testing.T) {
 		expectedType token.TokenType
 		expectedLit  string
 	}{
-		// {"৩", token.INT, "৩"},
+		{"৩", token.ILLEGAL, "৩"},
 		{"foo", token.IDENT, "foo"},
-		// {"_abc123-৩", token.IDENT, "_abc123-৩"},
-		// {"var﷽﷽﷽﷽﷽﷽﷽﷽﷽", token.IDENT, "var﷽﷽﷽﷽﷽﷽﷽﷽﷽"},
-		// {"emoji🧟‍♀️🧟‍♂️", token.IDENT, "emoji🧟‍♀️🧟‍♂️"},
+		{"če-ræ", token.IDENT, "če-ræ"},
+		{"_abc123-", token.IDENT, "_abc123-"},
 	}
 
 	for i, tt := range tests {
