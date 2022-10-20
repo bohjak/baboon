@@ -1,10 +1,9 @@
 package ast
 
 import (
-	"baboon/token"
-	"bytes"
-	"fmt"
 	"strings"
+
+	"baboon/token"
 )
 
 type Node interface {
@@ -36,8 +35,7 @@ func (p *Program) TokenLiteral() string {
 }
 
 func (p *Program) String() string {
-	// WTF this is how string concatenation works in go?
-	var out bytes.Buffer
+	var out strings.Builder
 
 	for _, s := range p.Statements {
 		out.WriteString(s.String())
@@ -55,7 +53,7 @@ type LetStatement struct {
 func (ls *LetStatement) statementNode()       {}
 func (ls *LetStatement) TokenLiteral() string { return ls.Token.Literal }
 func (ls *LetStatement) String() string {
-	var out bytes.Buffer
+	var out strings.Builder
 
 	out.WriteString(ls.Token.Literal + " ")
 	out.WriteString(ls.Name.String())
@@ -76,7 +74,7 @@ type ReturnStatement struct {
 func (rs *ReturnStatement) statementNode()       {}
 func (rs *ReturnStatement) TokenLiteral() string { return rs.Token.Literal }
 func (rs *ReturnStatement) String() string {
-	var out bytes.Buffer
+	var out strings.Builder
 
 	out.WriteString(rs.Token.Literal + " ")
 	if rs.Value != nil {
@@ -109,7 +107,7 @@ type BlockStatement struct {
 func (bs *BlockStatement) statementNode()       {}
 func (bs *BlockStatement) TokenLiteral() string { return bs.Token.Literal }
 func (bs *BlockStatement) String() string {
-	var out bytes.Buffer
+	var out strings.Builder
 
 	for _, stmt := range bs.Statements {
 		out.WriteString(stmt.String())
@@ -156,14 +154,7 @@ type PrefixExpression struct {
 func (pe *PrefixExpression) expressionNode()      {}
 func (pe *PrefixExpression) TokenLiteral() string { return pe.Token.Literal }
 func (pe *PrefixExpression) String() string {
-	var out bytes.Buffer
-
-	out.WriteString("(")
-	out.WriteString(pe.Operator)
-	out.WriteString(pe.Right.String())
-	out.WriteString(")")
-
-	return out.String()
+	return "(" + pe.Operator + pe.Right.String() + ")"
 }
 
 type InfixExpression struct {
@@ -176,15 +167,7 @@ type InfixExpression struct {
 func (ie *InfixExpression) expressionNode()      {}
 func (ie *InfixExpression) TokenLiteral() string { return ie.Token.Literal }
 func (ie *InfixExpression) String() string {
-	var out bytes.Buffer
-
-	out.WriteString("(")
-	out.WriteString(ie.Left.String())
-	out.WriteString(" " + ie.Operator + " ")
-	out.WriteString(ie.Right.String())
-	out.WriteString(")")
-
-	return out.String()
+	return "(" + ie.Left.String() + " " + ie.Operator + " " + ie.Right.String() + ")"
 }
 
 type Boolean struct {
@@ -206,7 +189,7 @@ type IfExpression struct {
 func (ie *IfExpression) expressionNode()      {}
 func (ie *IfExpression) TokenLiteral() string { return ie.Token.Literal }
 func (ie *IfExpression) String() string {
-	var out bytes.Buffer
+	var out strings.Builder
 
 	out.WriteString("if (")
 	out.WriteString(ie.Condition.String())
@@ -230,15 +213,15 @@ type FunctionExpression struct {
 func (fe *FunctionExpression) expressionNode()      {}
 func (fe *FunctionExpression) TokenLiteral() string { return fe.Token.Literal }
 func (fe *FunctionExpression) String() string {
-	var out bytes.Buffer
+	var out strings.Builder
+
+	params := []string{}
+	for _, param := range fe.Parameters {
+		params = append(params, param.String())
+	}
 
 	out.WriteString("fn(")
-	for i, param := range fe.Parameters {
-		if i != 0 {
-			out.WriteString(", ")
-		}
-		out.WriteString(param.String())
-	}
+	out.WriteString(strings.Join(params, ", "))
 	out.WriteString(") { ")
 	out.WriteString(fe.Body.String())
 	out.WriteString(" }")
@@ -255,7 +238,7 @@ type CallExpression struct {
 func (ce *CallExpression) expressionNode()      {}
 func (ce *CallExpression) TokenLiteral() string { return ce.Token.Literal }
 func (ce *CallExpression) String() string {
-	var out bytes.Buffer
+	var out strings.Builder
 
 	args := []string{}
 	for _, i := range ce.Arguments {
@@ -278,7 +261,7 @@ type ArrayLiteral struct {
 func (al *ArrayLiteral) expressionNode()      {}
 func (al *ArrayLiteral) TokenLiteral() string { return al.Token.Literal }
 func (al *ArrayLiteral) String() string {
-	var out bytes.Buffer
+	var out strings.Builder
 
 	items := []string{}
 	for _, i := range al.Items {
@@ -301,12 +284,5 @@ type AccessExpression struct {
 func (ae *AccessExpression) expressionNode()      {}
 func (ae *AccessExpression) TokenLiteral() string { return ae.Token.Literal }
 func (ae *AccessExpression) String() string {
-	var out bytes.Buffer
-
-	out.WriteString(ae.Array.String())
-	out.WriteString("[")
-	out.WriteString(fmt.Sprint(ae.Key))
-	out.WriteString("]")
-
-	return out.String()
+	return ae.Array.String() + "[" + ae.Key.String() + "]"
 }

@@ -1,7 +1,6 @@
 package object
 
 import (
-	"bytes"
 	"fmt"
 	"strings"
 
@@ -80,7 +79,7 @@ type Function struct {
 
 func (f *Function) Type() ObjectType { return FUNCTION_OBJ }
 func (f *Function) Inspect() string {
-	var out bytes.Buffer
+	var out strings.Builder
 
 	params := []string{}
 	for _, p := range f.Parameters {
@@ -112,7 +111,7 @@ type ArrayLiteral struct {
 
 func (al *ArrayLiteral) Type() ObjectType { return ARRAY_OBJ }
 func (al *ArrayLiteral) Inspect() string {
-	var out bytes.Buffer
+	var out strings.Builder
 
 	items := []string{}
 	for _, i := range al.Items {
