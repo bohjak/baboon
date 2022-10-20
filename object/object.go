@@ -20,6 +20,7 @@ const (
 	RETURN_OBJ   = "RETURN"
 	FUNCTION_OBJ = "FUNCTION"
 	BUILTIN_OBJ  = "BUILTIN"
+	ARRAY_OBJ    = "ARRAY"
 )
 
 type Object interface {
@@ -103,3 +104,24 @@ type Builtin struct {
 
 func (b *Builtin) Type() ObjectType { return BUILTIN_OBJ }
 func (b *Builtin) Inspect() string  { return "<builtin function>" }
+
+type ArrayLiteral struct {
+	Items []Object
+	// TODO: add length
+}
+
+func (al *ArrayLiteral) Type() ObjectType { return ARRAY_OBJ }
+func (al *ArrayLiteral) Inspect() string {
+	var out bytes.Buffer
+
+	items := []string{}
+	for _, i := range al.Items {
+		items = append(items, i.Inspect())
+	}
+
+	out.WriteString("[")
+	out.WriteString(strings.Join(items, ", "))
+	out.WriteString("]")
+
+	return out.String()
+}

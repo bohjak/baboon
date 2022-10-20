@@ -3,9 +3,12 @@ package ast
 import (
 	"baboon/token"
 	"bytes"
+	"fmt"
+	"strings"
 )
 
 type Node interface {
+	// useful for interface based operations
 	TokenLiteral() string
 	String() string
 }
@@ -254,15 +257,56 @@ func (ce *CallExpression) TokenLiteral() string { return ce.Token.Literal }
 func (ce *CallExpression) String() string {
 	var out bytes.Buffer
 
+	args := []string{}
+	for _, i := range ce.Arguments {
+		args = append(args, i.String())
+	}
+
 	out.WriteString(ce.Function.String())
 	out.WriteString("(")
-	for i, arg := range ce.Arguments {
-		if i != 0 {
-			out.WriteString(", ")
-		}
-		out.WriteString(arg.String())
-	}
+	out.WriteString(strings.Join(args, ", "))
 	out.WriteString(")")
+
+	return out.String()
+}
+
+type ArrayLiteral struct {
+	Token token.Token // LBRACKET
+	Items []Expression
+}
+
+func (al *ArrayLiteral) expressionNode()      {}
+func (al *ArrayLiteral) TokenLiteral() string { return al.Token.Literal }
+func (al *ArrayLiteral) String() string {
+	var out bytes.Buffer
+
+	items := []string{}
+	for _, i := range al.Items {
+		items = append(items, i.String())
+	}
+
+	out.WriteString("[ ")
+	out.WriteString(strings.Join(items, ", "))
+	out.WriteString(" ]")
+
+	return out.String()
+}
+
+type AccessExpression struct {
+	Token token.Token // LBRACKET
+	Array Expression  // IDENT or ARRAY
+	Key   Expression  // IDENT or INT
+}
+
+func (ae *AccessExpression) expressionNode()      {}
+func (ae *AccessExpression) TokenLiteral() string { return ae.Token.Literal }
+func (ae *AccessExpression) String() string {
+	var out bytes.Buffer
+
+	out.WriteString(ae.Array.String())
+	out.WriteString("[")
+	out.WriteString(fmt.Sprint(ae.Key))
+	out.WriteString("]")
 
 	return out.String()
 }

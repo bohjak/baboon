@@ -37,10 +37,12 @@ const (
 	COMMA     = ","
 	SEMICOLON = ";"
 
-	LPAREN = "("
-	RPAREN = ")"
-	LBRACE = "{"
-	RBRACE = "}"
+	LPAREN   = "("
+	RPAREN   = ")"
+	LBRACKET = "["
+	RBRACKET = "]"
+	LBRACE   = "{"
+	RBRACE   = "}"
 
 	// Keywords
 	FUNCTION = "FUNCTION"

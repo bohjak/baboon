@@ -34,6 +34,7 @@ func New(l *lexer.Lexer) *Parser {
 	p.prefixParseFns[token.LPAREN] = p.parseGroupedExpression
 	p.prefixParseFns[token.IF] = p.parseIfExpression
 	p.prefixParseFns[token.FUNCTION] = p.parseFunctionExpression
+	p.prefixParseFns[token.LBRACKET] = p.parseArrayLiteral
 
 	p.infixParseFns = make(map[token.TokenType]infixParseFn)
 	p.infixParseFns[token.PLUS] = p.parseInfixExpression
@@ -47,6 +48,7 @@ func New(l *lexer.Lexer) *Parser {
 	p.infixParseFns[token.LEQ] = p.parseInfixExpression
 	p.infixParseFns[token.GEQ] = p.parseInfixExpression
 	p.infixParseFns[token.LPAREN] = p.parseCallExpression
+	p.infixParseFns[token.LBRACKET] = p.parseAccessExpression
 
 	// Read two tokens to set both curToken and peekToken
 	p.nextToken()
@@ -230,6 +232,18 @@ func (p *Parser) parseStringLiteral() ast.Expression {
 	return &ast.StringLiteral{Token: p.curToken, Value: p.curToken.Literal}
 }
 
+func (p *Parser) parseArrayLiteral() ast.Expression {
+	array := &ast.ArrayLiteral{Token: p.curToken}
+
+	items := p.parseExpressionsList(token.RBRACKET)
+	if items == nil {
+		return nil
+	}
+	array.Items = items
+
+	return array
+}
+
 func (p *Parser) parseBoolean() ast.Expression {
 	return &ast.Boolean{Token: p.curToken, Value: p.curToken.Type == token.TRUE}
 }
@@ -374,32 +388,58 @@ func (p *Parser) parseInfixExpression(left ast.Expression) ast.Expression {
 
 func (p *Parser) parseCallExpression(function ast.Expression) ast.Expression {
 	exp := &ast.CallExpression{Token: p.curToken, Function: function}
-	exp.Arguments = p.parseCallArguments()
+	exp.Arguments = p.parseExpressionsList(token.RPAREN)
 	return exp
 }
 
-func (p *Parser) parseCallArguments() []ast.Expression {
-	args := []ast.Expression{}
+func (p *Parser) parseAccessExpression(array ast.Expression) ast.Expression {
+	exp := &ast.AccessExpression{Token: p.curToken, Array: array}
 
-	if p.peekToken.Type == token.RPAREN {
-		p.nextToken()
-		return args
+	if p.peekToken.Type == token.RBRACKET {
+		msg := fmt.Sprintf("[%d:%d] unexpected RBRACKET in access expression", p.curToken.Line, p.curToken.Column)
+		p.errors = append(p.errors, msg)
+		return nil
 	}
 
 	p.nextToken()
 
-	args = append(args, p.parseExpression(LOWEST))
-	for p.peekToken.Type == token.COMMA {
-		p.nextToken()
-		p.nextToken()
-		args = append(args, p.parseExpression(LOWEST))
+	key := p.parseExpression(LOWEST)
+	if key == nil {
+		msg := fmt.Sprintf("[%d:%d] couldn't parse expression beginning with %q", p.curToken.Line, p.curToken.Column, p.curToken.Type)
+		p.errors = append(p.errors, msg)
+		return nil
 	}
+	exp.Key = key
 
-	if !p.expectPeek(token.RPAREN) {
+	if !p.expectPeek(token.RBRACKET) {
 		return nil
 	}
 
-	return args
+	return exp
+}
+
+func (p *Parser) parseExpressionsList(end token.TokenType) []ast.Expression {
+	exps := []ast.Expression{}
+
+	if p.peekToken.Type == end {
+		p.nextToken()
+		return exps
+	}
+
+	p.nextToken()
+
+	exps = append(exps, p.parseExpression(LOWEST))
+	for p.peekToken.Type == token.COMMA && p.peekToken.Type != token.EOF {
+		p.nextToken()
+		p.nextToken()
+		exps = append(exps, p.parseExpression(LOWEST))
+	}
+
+	if !p.expectPeek(end) {
+		return nil
+	}
+
+	return exps
 }
 
 type (
@@ -430,6 +470,7 @@ var precedences = map[token.TokenType]int{
 	token.SLASH:    PRODUCT,
 	token.ASTERISK: PRODUCT,
 	token.LPAREN:   CALL,
+	token.LBRACKET: CALL, // TODO: maybe change to higher?
 }
 
 func (p *Parser) peekPrecedence() int {

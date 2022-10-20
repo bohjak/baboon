@@ -32,10 +32,10 @@ func TestEvalStringExpression(t *testing.T) {
 		input    string
 		expected string
 	}{
-		{"\"Hello, world!\"", "Hello, world!"},
-		{"let name = \"Zalgo\"; \"My name is\" + \" \" + name", "My name is Zalgo"},
-		{"if (\"a\" == \"a\") { \"true\" }", "true"},
-		{"if (\"a\" != \"b\") { \"true\" }", "true"},
+		{`"Hello, world!"`, "Hello, world!"},
+		{`let name = "Zalgo"; "My name is" + " " + name`, "My name is Zalgo"},
+		{`if ("a" == "a") { "true" }`, "true"},
+		{`if ("a" != "b") { "true" }`, "true"},
 	}
 
 	for i, tt := range tests {
@@ -148,6 +148,10 @@ func TestError(t *testing.T) {
 		{"let a = 1; let a = 2", "identifier already assigned: a"},
 		{`"hello" + 42`, "type mismatch: STRING + INTEGER"},
 		{`"a" < "b"`, "unknown operator: STRING < STRING"},
+		{"[][3]", "invalid argument: index 3 out of bounds"},
+		{"[1, 2][2]", "invalid argument: index 2 out of bounds"},
+		{"[1, 2][-3]", "invalid argument: index -3 out of bounds"},
+		{"[1, 2][true]", "invalid argument: ARRAY[BOOLEAN]"},
 	}
 
 	for i, tt := range tests {
@@ -216,10 +220,13 @@ func TestBuiltin(t *testing.T) {
 	}{
 		{`len("123456")`, 6},
 		{`len("৩")`, 3},
+		{`len("")`, 0},
 		{`len("šíleně žluťoučký ৩æ")`, 29},
 		{`len(42)`, "invalid argument: len(INTEGER)"},
 		{`len("abc", "def")`, "too many arguments for len: expected 1, found 2"},
 		{`len()`, "not enough arguments for len: expected 1, found 0"},
+		{`len([1, 2, 3, 4, 5])`, 5},
+		{`len([])`, 0},
 	}
 
 	for i, tt := range tests {
@@ -230,6 +237,64 @@ func TestBuiltin(t *testing.T) {
 			testIntegerObject(t, i, eval, int64(e))
 		case string:
 			testErrorObject(t, i, eval, e)
+		}
+	}
+}
+
+func TestArrayLiteral(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected []int
+	}{
+		{`[0, 1, 2]`, []int{0, 1, 2}},
+		{`[]`, []int{}},
+	}
+
+	for i, tt := range tests {
+		eval := testEval(tt.input)
+
+		array, ok := eval.(*object.ArrayLiteral)
+		if !ok {
+			t.Errorf("[%d] object is not Array, got %T", i, eval)
+			continue
+		}
+
+		for j, expected := range tt.expected {
+			item, ok := array.Items[j].(*object.Integer)
+			if !ok {
+				t.Errorf("[%d] array item %d is not Integer, got %s", i, j, array.Items[j].Type())
+				continue
+			}
+
+			if item.Value != int64(expected) {
+				t.Errorf("[%d] array item %d has wrong value; expected %d, got %d", i, j, expected, item.Value)
+			}
+		}
+	}
+}
+
+func TestArrayAccess(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected interface{}
+	}{
+		{`[0, 1, 2, 3][2]`, 2},
+		{`[42, "abc", true][1]`, "abc"},
+		{`let arr = [true, false]; arr[0]`, true},
+		{`let foo = [fn(bar) { len(bar) }]; foo[0]("12345")`, 5},
+		{`[3, 2, 1][-2]`, 2},
+	}
+
+	for i, tt := range tests {
+		eval := testEval(tt.input)
+
+		switch expected := tt.expected.(type) {
+		case int:
+			testIntegerObject(t, i, eval, int64(expected))
+		case string:
+			testStringObject(t, i, eval, expected)
+		case bool:
+			testBooleanObject(t, i, eval, expected)
 		}
 	}
 }

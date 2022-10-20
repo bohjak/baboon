@@ -18,12 +18,15 @@ var builtins = map[string]*object.Builtin{
 				return &object.Error{Message: fmt.Sprintf("too many arguments for len: expected 1, found %d", len(args)), Line: token.Line, Column: token.Column}
 			}
 
-			s, ok := args[0].(*object.String)
-			if !ok {
-				return &object.Error{Message: fmt.Sprintf("invalid argument: len(%s)", args[0].Type()), Line: token.Line, Column: token.Column}
+			switch arg := args[0].(type) {
+			case *object.String:
+				return &object.Integer{Value: int64(len(arg.Value))}
+			case *object.ArrayLiteral:
+				// TODO: use length field
+				return &object.Integer{Value: int64(len(arg.Items))}
+			default:
+				return &object.Error{Message: fmt.Sprintf("invalid argument: len(%s)", arg.Type()), Line: token.Line, Column: token.Column}
 			}
-
-			return &object.Integer{Value: int64(len(s.Value))}
 		},
 	},
 

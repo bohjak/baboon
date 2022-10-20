@@ -13,6 +13,17 @@ var (
 	NULL  = &object.Null{}
 )
 
+func newBoolean(value bool) *object.Boolean {
+	if value {
+		return TRUE
+	}
+	return FALSE
+}
+
+func newError(token token.Token, message string) *object.Error {
+	return &object.Error{Message: message, Line: token.Line, Column: token.Column}
+}
+
 func Eval(node ast.Node, env *object.Environment) object.Object {
 	switch node := node.(type) {
 	case *ast.Program:
@@ -54,10 +65,10 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 	case *ast.StringLiteral:
 		return &object.String{Value: node.Value}
 	case *ast.Boolean:
-		return ObjectBoolean(node.Value)
+		return newBoolean(node.Value)
 	case *ast.LetStatement:
 		if _, ok := env.Get(node.Name.Value); ok {
-			return &object.Error{Message: fmt.Sprintf("identifier already assigned: %s", node.Name.Value), Line: node.Token.Line, Column: node.Token.Column}
+			return newError(node.Token, fmt.Sprintf("identifier already assigned: %s", node.Name.Value))
 		}
 		// TODO: switch to lazy evaluation?
 		val := Eval(node.Value, env)
@@ -72,7 +83,7 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 		if builtin, ok := builtins[node.Value]; ok {
 			return builtin
 		}
-		return &object.Error{Message: fmt.Sprintf("identifier not found: %s", node.Value), Line: node.Token.Line, Column: node.Token.Column}
+		return newError(node.Token, fmt.Sprintf("identifier not found: %s", node.Value))
 	// TODO: add assignment
 	case *ast.FunctionExpression:
 		params := node.Parameters
@@ -90,16 +101,30 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 		}
 
 		return applyFunction(fn, args, node.Token)
-	default:
-		return &object.Error{Message: fmt.Sprintf("unknown node: [%T] %v", node, node)}
-	}
-}
+	case *ast.ArrayLiteral:
+		items := evalExpressions(node.Items, env)
+		if len(items) == 1 && items[0].Type() == object.ERROR_OBJ {
+			return items[0]
+		}
 
-func ObjectBoolean(value bool) *object.Boolean {
-	if value {
-		return TRUE
+		return &object.ArrayLiteral{Items: items}
+	case *ast.AccessExpression:
+		arr := Eval(node.Array, env)
+		if arr.Type() == object.ERROR_OBJ {
+			return arr
+		}
+
+		key := Eval(node.Key, env)
+		if key.Type() == object.ERROR_OBJ {
+			return key
+		}
+
+		return evalAccessExpression(arr, key, node.Token)
+	default:
+		// return newError(node.Token, fmt.Sprintf("unknown node: [%T] %v", node, node))
+		// FIXME: add Token() to ast.Node interface
+		return nil
 	}
-	return FALSE
 }
 
 func evalProgram(stmts []ast.Statement, env *object.Environment) object.Object {
@@ -138,7 +163,7 @@ func evalPrefixExpression(op string, right object.Object, token token.Token) obj
 	case "-":
 		return evalMinusPrefixExpression(right, token)
 	default:
-		return &object.Error{Message: fmt.Sprintf("unknown operator: %s%s", op, right.Type()), Line: token.Line, Column: token.Column}
+		return newError(token, fmt.Sprintf("unknown operator: %s%s", op, right.Type()))
 	}
 }
 
@@ -151,13 +176,13 @@ func evalBangExpression(obj object.Object, token token.Token) object.Object {
 	case NULL:
 		return TRUE
 	default:
-		return &object.Error{Message: fmt.Sprintf("unknown operator: !%s", obj.Type()), Line: token.Line, Column: token.Column}
+		return newError(token, fmt.Sprintf("unknown operator: !%s", obj.Type()))
 	}
 }
 
 func evalMinusPrefixExpression(obj object.Object, token token.Token) object.Object {
 	if obj.Type() != object.INTEGER_OBJ {
-		return &object.Error{Message: fmt.Sprintf("unknown operator: -%s", obj.Type()), Line: token.Line, Column: token.Column}
+		return newError(token, fmt.Sprintf("unknown operator: -%s", obj.Type()))
 	}
 
 	value := obj.(*object.Integer).Value
@@ -171,13 +196,13 @@ func evalInfixExpression(op string, left object.Object, right object.Object, tok
 	case left.Type() == object.STRING_OBJ && right.Type() == object.STRING_OBJ:
 		return evalStringExpression(op, left, right, token)
 	case left.Type() != right.Type():
-		return &object.Error{Message: fmt.Sprintf("type mismatch: %s %s %s", left.Type(), op, right.Type()), Line: token.Line, Column: token.Column}
+		return newError(token, fmt.Sprintf("type mismatch: %s %s %s", left.Type(), op, right.Type()))
 	case op == "==":
-		return ObjectBoolean(left == right)
+		return newBoolean(left == right)
 	case op == "!=":
-		return ObjectBoolean(left != right)
+		return newBoolean(left != right)
 	default:
-		return &object.Error{Message: fmt.Sprintf("unknown operator: %s %s %s", left.Type(), op, right.Type()), Line: token.Line, Column: token.Column}
+		return newError(token, fmt.Sprintf("unknown operator: %s %s %s", left.Type(), op, right.Type()))
 	}
 }
 
@@ -207,7 +232,7 @@ func evalIntegerExpression(op string, left object.Object, right object.Object, t
 	case "!=":
 		return &object.Boolean{Value: leftVal != rightVal}
 	default:
-		return &object.Error{Message: fmt.Sprintf("unknown operator: %s %s %s", left.Type(), op, right.Type()), Line: token.Line, Column: token.Column}
+		return newError(token, fmt.Sprintf("unknown operator: %s %s %s", left.Type(), op, right.Type()))
 	}
 }
 
@@ -223,7 +248,7 @@ func evalStringExpression(op string, left object.Object, right object.Object, to
 	case "!=":
 		return &object.Boolean{Value: leftVal != rightVal}
 	default:
-		return &object.Error{Message: fmt.Sprintf("unknown operator: %s %s %s", left.Type(), op, right.Type()), Line: token.Line, Column: token.Column}
+		return newError(token, fmt.Sprintf("unknown operator: %s %s %s", left.Type(), op, right.Type()))
 	}
 }
 
@@ -264,7 +289,7 @@ func applyFunction(fn object.Object, args []object.Object, token token.Token) ob
 	case *object.Builtin:
 		return fn.Fn(token, args...)
 	default:
-		return &object.Error{Message: fmt.Sprintf("not a function: %s", fn.Type()), Line: token.Line, Column: token.Column}
+		return newError(token, fmt.Sprintf("not a function: %s", fn.Type()))
 	}
 }
 
@@ -276,4 +301,29 @@ func extendFnEnv(fn *object.Function, args []object.Object) *object.Environment 
 	}
 
 	return env
+}
+
+func evalAccessExpression(arr object.Object, key object.Object, token token.Token) object.Object {
+	switch {
+	case arr.Type() == object.ARRAY_OBJ && key.Type() == object.INTEGER_OBJ:
+		return evalArrayIndexExpression(arr, key, token)
+	default:
+		return newError(token, fmt.Sprintf("invalid argument: %s[%s]", arr.Type(), key.Type()))
+	}
+}
+
+func evalArrayIndexExpression(arr object.Object, key object.Object, token token.Token) object.Object {
+	items := arr.(*object.ArrayLiteral).Items
+	idx := key.(*object.Integer).Value
+
+	length := int64(len(items))
+
+	switch {
+	case idx < 0 && length+idx > 0:
+		return items[length+idx]
+	case idx >= 0 && idx < length:
+		return items[idx]
+	default:
+		return newError(token, fmt.Sprintf("invalid argument: index %d out of bounds", idx))
+	}
 }

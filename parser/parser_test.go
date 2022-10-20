@@ -1,10 +1,11 @@
 package parser
 
 import (
-	"baboon/ast"
-	"baboon/lexer"
 	"fmt"
 	"testing"
+
+	"baboon/ast"
+	"baboon/lexer"
 )
 
 func TestOperatorPrecedence(t *testing.T) {
@@ -96,69 +97,29 @@ func TestPrefixExpressions(t *testing.T) {
 			t.Fatalf("exp.Operator is not %q, got %q", tt.operator, exp.Operator)
 		}
 
-		if !testIntegerLiteral(t, exp.Right, tt.integerValue) {
+		if !testLiteralExpression(t, exp.Right, tt.integerValue) {
 			return
 		}
 	}
 }
 
-func TestIntegerLiteralExpression(t *testing.T) {
-	input := "5;"
-
-	program := testParse(t, input)
-
-	assertStatementsLen(t, program.Statements, 1)
-
-	stmt := assertExpressionStatement(t, program.Statements[0])
-
-	if !testIntegerLiteral(t, stmt.Expression, 5) {
-		return
-	}
-}
-
-func TestStringLiteralExpression(t *testing.T) {
-	input := "\"Hello, World!\""
-
-	program := testParse(t, input)
-
-	assertStatementsLen(t, program.Statements, 1)
-	stmt := assertExpressionStatement(t, program.Statements[0])
-	testStringLiteral(t, stmt.Expression, "Hello, World!")
-}
-
-func TestIdentifierExpression(t *testing.T) {
-	input := "foobar;"
-
-	program := testParse(t, input)
-
-	assertStatementsLen(t, program.Statements, 1)
-
-	stmt := assertExpressionStatement(t, program.Statements[0])
-
-	if !testIdentifier(t, stmt.Expression, "foobar") {
-		return
-	}
-}
-
-func TestBooleanExpressions(t *testing.T) {
-	boolTests := []struct {
-		input string
-		value bool
+func TestLiteralExpression(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected interface{}
 	}{
-		{"true;", true},
-		{"false;", false},
+		{`5`, 5},
+		{`"Hello, World!"`, "Hello, World!"},
+		{`true`, true},
+		{`false`, false},
+		{`foo`, "foo"},
 	}
 
-	for _, tt := range boolTests {
-		program := testParse(t, tt.input)
-
-		assertStatementsLen(t, program.Statements, 1)
-
-		stmt := assertExpressionStatement(t, program.Statements[0])
-
-		if !testLiteralExpression(t, stmt.Expression, tt.value) {
-			return
-		}
+	for _, tt := range tests {
+		prog := testParse(t, tt.input)
+		assertStatementsLen(t, prog.Statements, 1)
+		stmt := assertExpressionStatement(t, prog.Statements[0])
+		testLiteralExpression(t, stmt.Expression, tt.expected)
 	}
 }
 
@@ -377,6 +338,61 @@ func TestLetStatements(t *testing.T) {
 	}
 }
 
+func TestArrayLiteral(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{`[1, 2, 3]`, `[ 1, 2, 3 ]`},
+		{`["foo", 3 + 4, true]`, `[ "foo", (3 + 4), true ]`},
+		{`[]`, `[  ]`},
+	}
+
+	for _, tt := range tests {
+		prog := testParse(t, tt.input)
+
+		assertStatementsLen(t, prog.Statements, 1)
+
+		stmt := assertExpressionStatement(t, prog.Statements[0])
+
+		arr, ok := stmt.Expression.(*ast.ArrayLiteral)
+		if !ok {
+			t.Errorf("expression not ast.ArrayLiteral, got %T", stmt.Expression)
+			continue
+		}
+
+		if arr.String() != tt.expected {
+			t.Errorf("array has wrong content; expected %s, got %s", tt.expected, arr.String())
+		}
+	}
+}
+
+func TestAccessExpression(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected int
+	}{
+		{"[][0]", 0},
+		{"[0, 2, 4][1]", 1},
+		{"foo[2]", 2},
+	}
+
+	for i, tt := range tests {
+		prog := testParse(t, tt.input)
+
+		assertStatementsLen(t, prog.Statements, 1)
+		stmt := assertExpressionStatement(t, prog.Statements[0])
+
+		exp, ok := stmt.Expression.(*ast.AccessExpression)
+		if !ok {
+			t.Errorf("[%d] expression is not ast.AccessExpression, got %T", i, stmt.Expression)
+			continue
+		}
+
+		testLiteralExpression(t, exp.Key, tt.expected)
+	}
+}
+
 /* HELPERS */
 
 func testParse(t *testing.T, input string) *ast.Program {
@@ -403,7 +419,7 @@ func checkParserErrors(t *testing.T, p *Parser) {
 
 func assertStatementsLen(t *testing.T, stmts []ast.Statement, n int) {
 	if len(stmts) != n {
-		t.Fatalf("statements expeted %d, got %d", n, len(stmts))
+		t.Fatalf("statements expected %d, got %d", n, len(stmts))
 	}
 }
 
@@ -497,7 +513,12 @@ func testLiteralExpression(t *testing.T, exp ast.Expression, expected interface{
 	case int64:
 		return testIntegerLiteral(t, exp, v)
 	case string:
-		return testIdentifier(t, exp, v)
+		if id, ok := exp.(*ast.Identifier); ok {
+			return testIdentifier(t, id, v)
+
+		} else {
+			return testStringLiteral(t, exp, v)
+		}
 	case bool:
 		return testBoolean(t, exp, v)
 	default:
