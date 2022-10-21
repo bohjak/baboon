@@ -20,7 +20,7 @@ func newBoolean(value bool) *object.Boolean {
 	return FALSE
 }
 
-func newError(token token.Token, message string) *object.Error {
+func newError(token *token.Token, message string) *object.Error {
 	return &object.Error{Message: message, Line: token.Line, Column: token.Column}
 }
 
@@ -43,7 +43,7 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 		if right.Type() == object.ERROR_OBJ {
 			return right
 		}
-		return evalPrefixExpression(node.Operator, right, node.Token)
+		return evalPrefixExpression(node.Operator, right, &node.Token)
 	case *ast.InfixExpression:
 		left := Eval(node.Left, env)
 		if left.Type() == object.ERROR_OBJ {
@@ -53,7 +53,7 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 		if right.Type() == object.ERROR_OBJ {
 			return right
 		}
-		return evalInfixExpression(node.Operator, left, right, node.Token)
+		return evalInfixExpression(node.Operator, left, right, &node.Token)
 	case *ast.IfExpression:
 		cond := Eval(node.Condition, env)
 		if cond.Type() == object.ERROR_OBJ {
@@ -68,7 +68,7 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 		return newBoolean(node.Value)
 	case *ast.LetStatement:
 		if _, ok := env.Get(node.Name.Value); ok {
-			return newError(node.Token, fmt.Sprintf("identifier already assigned: %s", node.Name.Value))
+			return newError(&node.Token, fmt.Sprintf("identifier already assigned: %s", node.Name.Value))
 		}
 		// TODO: switch to lazy evaluation?
 		val := Eval(node.Value, env)
@@ -83,7 +83,7 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 		if builtin, ok := builtins[node.Value]; ok {
 			return builtin
 		}
-		return newError(node.Token, fmt.Sprintf("identifier not found: %s", node.Value))
+		return newError(&node.Token, fmt.Sprintf("identifier not found: %s", node.Value))
 	// TODO: add assignment
 	case *ast.FunctionExpression:
 		params := node.Parameters
@@ -100,7 +100,7 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 			return args[0]
 		}
 
-		return applyFunction(fn, args, node.Token)
+		return applyFunction(fn, args, &node.Token)
 	case *ast.ArrayLiteral:
 		items := evalExpressions(node.Items, env)
 		if len(items) == 1 && items[0].Type() == object.ERROR_OBJ {
@@ -119,7 +119,7 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 			return key
 		}
 
-		return evalAccessExpression(arr, key, node.Token)
+		return evalAccessExpression(arr, key, &node.Token)
 	default:
 		// return newError(node.Token, fmt.Sprintf("unknown node: [%T] %v", node, node))
 		// FIXME: add Token() to ast.Node interface
@@ -156,7 +156,7 @@ func evalBlockStatement(stmts []ast.Statement, env *object.Environment) object.O
 	return result
 }
 
-func evalPrefixExpression(op string, right object.Object, token token.Token) object.Object {
+func evalPrefixExpression(op string, right object.Object, token *token.Token) object.Object {
 	switch op {
 	case "!":
 		return evalBangExpression(right, token)
@@ -167,7 +167,7 @@ func evalPrefixExpression(op string, right object.Object, token token.Token) obj
 	}
 }
 
-func evalBangExpression(obj object.Object, token token.Token) object.Object {
+func evalBangExpression(obj object.Object, token *token.Token) object.Object {
 	switch obj {
 	case TRUE:
 		return FALSE
@@ -180,7 +180,7 @@ func evalBangExpression(obj object.Object, token token.Token) object.Object {
 	}
 }
 
-func evalMinusPrefixExpression(obj object.Object, token token.Token) object.Object {
+func evalMinusPrefixExpression(obj object.Object, token *token.Token) object.Object {
 	if obj.Type() != object.INTEGER_OBJ {
 		return newError(token, fmt.Sprintf("unknown operator: -%s", obj.Type()))
 	}
@@ -189,7 +189,7 @@ func evalMinusPrefixExpression(obj object.Object, token token.Token) object.Obje
 	return &object.Integer{Value: -value}
 }
 
-func evalInfixExpression(op string, left object.Object, right object.Object, token token.Token) object.Object {
+func evalInfixExpression(op string, left object.Object, right object.Object, token *token.Token) object.Object {
 	switch {
 	case left.Type() == object.INTEGER_OBJ && right.Type() == object.INTEGER_OBJ:
 		return evalIntegerExpression(op, left, right, token)
@@ -206,7 +206,7 @@ func evalInfixExpression(op string, left object.Object, right object.Object, tok
 	}
 }
 
-func evalIntegerExpression(op string, left object.Object, right object.Object, token token.Token) object.Object {
+func evalIntegerExpression(op string, left object.Object, right object.Object, token *token.Token) object.Object {
 	leftVal := left.(*object.Integer).Value
 	rightVal := right.(*object.Integer).Value
 
@@ -236,7 +236,7 @@ func evalIntegerExpression(op string, left object.Object, right object.Object, t
 	}
 }
 
-func evalStringExpression(op string, left object.Object, right object.Object, token token.Token) object.Object {
+func evalStringExpression(op string, left object.Object, right object.Object, token *token.Token) object.Object {
 	leftVal := left.(*object.String).Value
 	rightVal := right.(*object.String).Value
 
@@ -277,7 +277,7 @@ func evalExpressions(expressions []ast.Expression, env *object.Environment) []ob
 	return res
 }
 
-func applyFunction(fn object.Object, args []object.Object, token token.Token) object.Object {
+func applyFunction(fn object.Object, args []object.Object, token *token.Token) object.Object {
 	switch fn := fn.(type) {
 	case *object.Function:
 		extEnv := extendFnEnv(fn, args)
@@ -303,7 +303,7 @@ func extendFnEnv(fn *object.Function, args []object.Object) *object.Environment 
 	return env
 }
 
-func evalAccessExpression(arr object.Object, key object.Object, token token.Token) object.Object {
+func evalAccessExpression(arr object.Object, key object.Object, token *token.Token) object.Object {
 	switch {
 	case arr.Type() == object.ARRAY_OBJ && key.Type() == object.INTEGER_OBJ:
 		return evalArrayIndexExpression(arr, key, token)
@@ -312,7 +312,7 @@ func evalAccessExpression(arr object.Object, key object.Object, token token.Toke
 	}
 }
 
-func evalArrayIndexExpression(arr object.Object, key object.Object, token token.Token) object.Object {
+func evalArrayIndexExpression(arr object.Object, key object.Object, token *token.Token) object.Object {
 	items := arr.(*object.ArrayLiteral).Items
 	idx := key.(*object.Integer).Value
 

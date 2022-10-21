@@ -95,7 +95,7 @@ func (f *Function) Inspect() string {
 	return out.String()
 }
 
-type BuiltinFunction func(token token.Token, args ...Object) Object
+type BuiltinFunction func(token *token.Token, args ...Object) Object
 
 type Builtin struct {
 	Fn BuiltinFunction
