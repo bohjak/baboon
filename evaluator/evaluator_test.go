@@ -15,6 +15,7 @@ func TestEvalVoid(t *testing.T) {
 		{"fn(){}()"},
 		{"if true {}"},
 		{"()"},
+		{"{}"},
 	}
 
 	for i, tt := range tests {
