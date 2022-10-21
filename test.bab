@@ -5,4 +5,27 @@ let mul = fn(a, b) {
 	a * b
 }
 
-mul(a, b)
+mul(a, b);
+
+let map = fn(arr, f) {
+	let aux = fn(acc, arr) {
+		if len(arr) == 0 {
+			return acc;
+		}
+		aux(append(acc, f(first(arr))), tail(arr));
+	};
+	aux([], arr)
+};
+
+let sum = fn(arr) {
+	let aux = fn(acc, arr) {
+		if len(arr) == 0 {
+			return acc
+		}
+		aux(acc + first(arr), tail(arr))
+	};
+	aux(0, arr)
+};
+
+let ns = [1, 2, 3, 4, 5]
+sum(map(ns, fn(n) {n * 2}))

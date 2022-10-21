@@ -262,7 +262,12 @@ func (p *Parser) parsePrefixExpression() ast.Expression {
 }
 
 func (p *Parser) parseGroupedExpression() ast.Expression {
-	p.nextToken() // eat the (
+	if p.peekToken.Type == token.RPAREN {
+		p.nextToken() // eat LPAREN
+		return nil
+	}
+
+	p.nextToken() // eat LPAREN
 
 	exp := p.parseExpression(LOWEST)
 
@@ -277,17 +282,9 @@ func (p *Parser) parseGroupedExpression() ast.Expression {
 func (p *Parser) parseIfExpression() ast.Expression {
 	exp := &ast.IfExpression{Token: p.curToken}
 
-	// eat IF
-	if !p.expectPeek(token.LPAREN) {
-		return nil
-	}
-	p.nextToken() // eat LPAREN
+	p.nextToken() // eat IF
 
 	exp.Condition = p.parseExpression(LOWEST)
-
-	if !p.expectPeek(token.RPAREN) {
-		return nil
-	}
 
 	if !p.expectPeek(token.LBRACE) {
 		return nil

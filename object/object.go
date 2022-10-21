@@ -14,7 +14,7 @@ const (
 	INTEGER_OBJ  = "INTEGER"
 	STRING_OBJ   = "STRING"
 	BOOLEAN_OBJ  = "BOOLEAN"
-	NULL_OBJ     = "NULL"
+	VOID_OBJ     = "VOID"
 	ERROR_OBJ    = "ERROR"
 	RETURN_OBJ   = "RETURN"
 	FUNCTION_OBJ = "FUNCTION"
@@ -48,10 +48,10 @@ type Boolean struct {
 func (b *Boolean) Type() ObjectType { return BOOLEAN_OBJ }
 func (b *Boolean) Inspect() string  { return fmt.Sprint(b.Value) }
 
-type Null struct{}
+type Void struct{}
 
-func (n *Null) Type() ObjectType { return NULL_OBJ }
-func (n *Null) Inspect() string  { return "null" }
+func (n *Void) Type() ObjectType { return VOID_OBJ }
+func (n *Void) Inspect() string  { return "<void>" }
 
 type Error struct {
 	Message string

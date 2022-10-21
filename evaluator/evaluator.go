@@ -10,7 +10,7 @@ import (
 var (
 	TRUE  = &object.Boolean{Value: true}
 	FALSE = &object.Boolean{Value: false}
-	NULL  = &object.Null{}
+	VOID  = &object.Void{}
 )
 
 func newBoolean(value bool) *object.Boolean {
@@ -59,7 +59,7 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 		if cond.Type() == object.ERROR_OBJ {
 			return cond
 		}
-		return evalIfExpression(cond, node.Consequence, node.Alternative, env)
+		return evalIfExpression(cond, node.Consequence, node.Alternative, env, &node.Token)
 	case *ast.IntegerLiteral:
 		return &object.Integer{Value: node.Value}
 	case *ast.StringLiteral:
@@ -128,7 +128,7 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 }
 
 func evalProgram(stmts []ast.Statement, env *object.Environment) object.Object {
-	var result object.Object
+	var result object.Object = VOID
 
 	for _, stmt := range stmts {
 		result = Eval(stmt, env)
@@ -144,7 +144,7 @@ func evalProgram(stmts []ast.Statement, env *object.Environment) object.Object {
 }
 
 func evalBlockStatement(stmts []ast.Statement, env *object.Environment) object.Object {
-	var result object.Object
+	var result object.Object = VOID
 
 	for _, stmt := range stmts {
 		result = Eval(stmt, env)
@@ -173,7 +173,7 @@ func evalBangExpression(obj object.Object, token *token.Token) object.Object {
 		return FALSE
 	case FALSE:
 		return TRUE
-	case NULL:
+	case VOID:
 		return TRUE
 	default:
 		return newError(token, fmt.Sprintf("unknown operator: !%s", obj.Type()))
@@ -220,17 +220,17 @@ func evalIntegerExpression(op string, left object.Object, right object.Object, t
 	case "/":
 		return &object.Integer{Value: leftVal / rightVal}
 	case "<":
-		return &object.Boolean{Value: leftVal < rightVal}
+		return newBoolean(leftVal < rightVal)
 	case ">":
-		return &object.Boolean{Value: leftVal > rightVal}
+		return newBoolean(leftVal > rightVal)
 	case "<=":
-		return &object.Boolean{Value: leftVal <= rightVal}
+		return newBoolean(leftVal <= rightVal)
 	case ">=":
-		return &object.Boolean{Value: leftVal >= rightVal}
+		return newBoolean(leftVal >= rightVal)
 	case "==":
-		return &object.Boolean{Value: leftVal == rightVal}
+		return newBoolean(leftVal == rightVal)
 	case "!=":
-		return &object.Boolean{Value: leftVal != rightVal}
+		return newBoolean(leftVal != rightVal)
 	default:
 		return newError(token, fmt.Sprintf("unknown operator: %s %s %s", left.Type(), op, right.Type()))
 	}
@@ -244,21 +244,24 @@ func evalStringExpression(op string, left object.Object, right object.Object, to
 	case "+":
 		return &object.String{Value: leftVal + rightVal}
 	case "==":
-		return &object.Boolean{Value: leftVal == rightVal}
+		return newBoolean(leftVal == rightVal)
 	case "!=":
-		return &object.Boolean{Value: leftVal != rightVal}
+		return newBoolean(leftVal != rightVal)
 	default:
 		return newError(token, fmt.Sprintf("unknown operator: %s %s %s", left.Type(), op, right.Type()))
 	}
 }
 
-func evalIfExpression(condition object.Object, consequence *ast.BlockStatement, alternative *ast.BlockStatement, env *object.Environment) object.Object {
-	if condition != FALSE && condition != NULL {
+func evalIfExpression(condition object.Object, consequence *ast.BlockStatement, alternative *ast.BlockStatement, env *object.Environment, token *token.Token) object.Object {
+	if condition == TRUE {
 		return Eval(consequence, env)
+	} else if condition != FALSE {
+		return newError(token, fmt.Sprintf("non-boolean condition in IF expression: %s", condition.Type()))
+
 	} else if alternative != nil {
 		return Eval(alternative, env)
 	} else {
-		return NULL
+		return VOID
 	}
 }
 

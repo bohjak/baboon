@@ -19,7 +19,7 @@ func TestOperatorPrecedence(t *testing.T) {
 		{"a + b * c", "(a + (b * c))"},
 		{"a * b + c", "((a * b) + c)"},
 		{"5 > 4 == 3 < 6", "((5 > 4) == (3 < 6))"},
-		{"a + b; -c * d", "(a + b)((-c) * d)"},
+		{"a + b; -c * d", "(a + b)\n((-c) * d)"},
 		{"(a + b) * c", "((a + b) * c)"},
 		{"a + (b + c) + d", "((a + (b + c)) + d)"},
 		{"!(a < b)", "(!(a < b))"},
@@ -343,9 +343,9 @@ func TestArrayLiteral(t *testing.T) {
 		input    string
 		expected string
 	}{
-		{`[1, 2, 3]`, `[ 1, 2, 3 ]`},
-		{`["foo", 3 + 4, true]`, `[ "foo", (3 + 4), true ]`},
-		{`[]`, `[  ]`},
+		{`[1, 2, 3]`, `[1, 2, 3]`},
+		{`["foo", 3 + 4, true]`, `["foo", (3 + 4), true]`},
+		{`[]`, `[]`},
 	}
 
 	for _, tt := range tests {

@@ -185,12 +185,12 @@ return!`
 		expectedLine int
 		expectedCol  int
 	}{
-		{token.IDENT, 1, 1},
-		{token.ASSIGN, 1, 12},
-		{token.INT, 1, 14},
-		{token.SEMICOLON, 1, 17},
-		{token.RETURN, 2, 1},
-		{token.BANG, 2, 7},
+		{token.IDENT, 2, 1},
+		{token.ASSIGN, 2, 12},
+		{token.INT, 2, 14},
+		{token.SEMICOLON, 2, 17},
+		{token.RETURN, 3, 1},
+		{token.BANG, 3, 7},
 	}
 
 	for i, tt := range tests {

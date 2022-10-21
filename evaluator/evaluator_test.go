@@ -7,6 +7,22 @@ import (
 	"testing"
 )
 
+func TestEvalVoid(t *testing.T) {
+	tests := []struct {
+		input string
+	}{
+		{""},
+		{"fn(){}()"},
+		{"if true {}"},
+		{"()"},
+	}
+
+	for i, tt := range tests {
+		eval := testEval(tt.input)
+		testVoidObject(t, i, eval)
+	}
+}
+
 func TestEvalIntegerExpression(t *testing.T) {
 	tests := []struct {
 		input    string
@@ -87,10 +103,14 @@ func TestEvalIfExpression(t *testing.T) {
 		input    string
 		expected interface{}
 	}{
-		{"if (true) {5}", 5},
-		{"if (false) {5}", nil},
-		{"if (true) {1} else {2}", 1},
-		{"if (false) {1} else {2}", 2},
+		{"if true {5}", 5},
+		{"if false {5}", nil},
+		{"if true {1} else {2}", 1},
+		{"if false {1} else {2}", 2},
+		{"if false {true == 5} else {2}", 2},
+		{"fn(ns){if len(ns) == 0 {return 1} else {return 2}}([1])", 2},
+		{"if 1 == 2 {true}", nil},
+		{"if true {}", nil},
 	}
 
 	for i, tt := range tests {
@@ -99,7 +119,7 @@ func TestEvalIfExpression(t *testing.T) {
 		if expected, ok := tt.expected.(int); ok {
 			testIntegerObject(t, i, evaluated, int64(expected))
 		} else {
-			testNullObject(t, i, evaluated)
+			testVoidObject(t, i, evaluated)
 		}
 	}
 }
@@ -152,6 +172,8 @@ func TestError(t *testing.T) {
 		{"[1, 2][2]", "invalid argument: index 2 out of bounds"},
 		{"[1, 2][-3]", "invalid argument: index -3 out of bounds"},
 		{"[1, 2][true]", "invalid argument: ARRAY[BOOLEAN]"},
+		{"if 1 {2}", "non-boolean condition in IF expression: INTEGER"},
+		{"if if false {} {}", "non-boolean condition in IF expression: VOID"},
 	}
 
 	for i, tt := range tests {
@@ -227,6 +249,31 @@ func TestBuiltin(t *testing.T) {
 		{`len()`, "not enough arguments for len: expected 1, found 0"},
 		{`len([1, 2, 3, 4, 5])`, 5},
 		{`len([])`, 0},
+		{`len(tail([]))`, 0},
+		{`
+let map = fn(arr, f) {
+	let aux = fn(acc, arr) {
+		if len(arr) == 0 {
+			return acc;
+		}
+		aux(append(acc, f(first(arr))), tail(arr));
+	};
+	aux([], arr)
+};
+
+let sum = fn(arr) {
+	let aux = fn(acc, arr) {
+		if len(arr) == 0 {
+			return acc
+		}
+		aux(acc + first(arr), tail(arr))
+	};
+	aux(0, arr)
+};
+
+let ns = [1, 2, 3, 4, 5]
+sum(map(ns, fn(n) {n * 2}))
+		`, 30},
 	}
 
 	for i, tt := range tests {
@@ -357,9 +404,9 @@ func testBooleanObject(t *testing.T, i int, obj object.Object, expected bool) bo
 	return true
 }
 
-func testNullObject(t *testing.T, i int, obj object.Object) bool {
-	if obj != NULL {
-		t.Errorf("[%d] object is not Null, got %T", i, obj)
+func testVoidObject(t *testing.T, i int, obj object.Object) bool {
+	if obj != VOID {
+		t.Errorf("[%d] object is not Void, got %T", i, obj)
 		return false
 	}
 

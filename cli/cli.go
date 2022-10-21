@@ -91,7 +91,6 @@ func Run(args []string) {
 			fmt.Printf("[%d:%d]\t%8s: %q\n", tok.Line, tok.Column, tok.Type, tok.Literal)
 		}
 	} else if opts.parse {
-
 		p := parser.New(l)
 		prog := p.ParseProgram()
 		printErrors(p.Errors())
@@ -100,6 +99,7 @@ func Run(args []string) {
 		p := parser.New(l)
 		prog := p.ParseProgram()
 		env := object.NewEnvironment()
+		printErrors(p.Errors())
 		fmt.Println(evaluator.Eval(prog, env).Inspect())
 	}
 }

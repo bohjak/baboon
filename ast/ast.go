@@ -35,13 +35,11 @@ func (p *Program) TokenLiteral() string {
 }
 
 func (p *Program) String() string {
-	var out strings.Builder
-
+	var out []string
 	for _, s := range p.Statements {
-		out.WriteString(s.String())
+		out = append(out, s.String())
 	}
-
-	return out.String()
+	return strings.Join(out, "\n")
 }
 
 type LetStatement struct {
@@ -191,9 +189,9 @@ func (ie *IfExpression) TokenLiteral() string { return ie.Token.Literal }
 func (ie *IfExpression) String() string {
 	var out strings.Builder
 
-	out.WriteString("if (")
+	out.WriteString("if ")
 	out.WriteString(ie.Condition.String())
-	out.WriteString(") { ")
+	out.WriteString(" { ")
 	out.WriteString(ie.Consequence.String())
 	if ie.Alternative != nil {
 		out.WriteString(" } else { ")
@@ -268,9 +266,9 @@ func (al *ArrayLiteral) String() string {
 		items = append(items, i.String())
 	}
 
-	out.WriteString("[ ")
+	out.WriteString("[")
 	out.WriteString(strings.Join(items, ", "))
-	out.WriteString(" ]")
+	out.WriteString("]")
 
 	return out.String()
 }
