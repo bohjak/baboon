@@ -72,6 +72,20 @@ func (l *Lexer) NextToken() token.Token {
 			tok.Type = token.ASSIGN
 			tok.Literal = string(l.ch)
 		}
+	case ':':
+		pc := l.peekChar()
+		if pc == '=' {
+			l.readChar()
+			tok.Type = token.DEFINE
+			tok.Literal = ":="
+		} else if pc == ':' {
+			l.readChar()
+			tok.Type = token.CONST
+			tok.Literal = "::"
+		} else {
+			tok.Type = token.ILLEGAL
+			tok.Literal = string(l.ch)
+		}
 	case ';':
 		tok.Type = token.SEMICOLON
 		tok.Literal = string(l.ch)

@@ -8,21 +8,29 @@ import (
 func TestString(t *testing.T) {
 	program := &Program{
 		Statements: []Statement{
-			&LetStatement{
-				Token: token.Token{Type: token.LET, Literal: "let"},
-				Name: &Identifier{
-					Token: token.Token{Type: token.IDENT, Literal: "myVar"},
-					Value: "myVar",
-				},
-				Value: &Identifier{
-					Token: token.Token{Type: token.IDENT, Literal: "anotherVar"},
-					Value: "anotherVar",
+			&ExpressionStatement{
+				Expression: &IfExpression{
+					Token: token.Token{Type: token.IF, Literal: "if"},
+					Condition: &Identifier{
+						Token: token.Token{Type: token.IDENT, Literal: "myVar"},
+						Value: "myVar",
+					},
+					Consequence: &BlockStatement{
+						Statements: []Statement{
+							&ExpressionStatement{
+								Expression: &Identifier{
+									Token: token.Token{Type: token.IDENT, Literal: "anotherVar"},
+									Value: "anotherVar",
+								},
+							},
+						},
+					},
 				},
 			},
 		},
 	}
 
-	if program.String() != "let myVar = anotherVar;" {
+	if program.String() != "if myVar { anotherVar }" {
 		t.Errorf("program.String() wrong; got %q", program.String())
 	}
 }

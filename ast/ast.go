@@ -42,28 +42,6 @@ func (p *Program) String() string {
 	return strings.Join(out, "\n")
 }
 
-type LetStatement struct {
-	Token token.Token // LET
-	Name  *Identifier
-	Value Expression
-}
-
-func (ls *LetStatement) statementNode()       {}
-func (ls *LetStatement) TokenLiteral() string { return ls.Token.Literal }
-func (ls *LetStatement) String() string {
-	var out strings.Builder
-
-	out.WriteString(ls.Token.Literal + " ")
-	out.WriteString(ls.Name.String())
-	out.WriteString(" = ")
-	if ls.Value != nil {
-		out.WriteString(ls.Value.String())
-	}
-	out.WriteString(";")
-
-	return out.String()
-}
-
 type ReturnStatement struct {
 	Token token.Token // RETURN
 	Value Expression
@@ -283,4 +261,20 @@ func (ae *AccessExpression) expressionNode()      {}
 func (ae *AccessExpression) TokenLiteral() string { return ae.Token.Literal }
 func (ae *AccessExpression) String() string {
 	return ae.Array.String() + "[" + ae.Key.String() + "]"
+}
+
+type AssignExpression struct {
+	Token token.Token // DEFINE | ASSIGN | CONST
+	Name  *Identifier
+	Value Expression
+}
+
+func (ae *AssignExpression) expressionNode()      {}
+func (ae *AssignExpression) TokenLiteral() string { return ae.Token.Literal }
+func (ae *AssignExpression) String() string {
+	if ae.Value == nil {
+		return ae.Name.String() + ae.Token.Literal
+	} else {
+		return ae.Name.String() + " " + ae.Token.Literal + " " + ae.Value.String()
+	}
 }

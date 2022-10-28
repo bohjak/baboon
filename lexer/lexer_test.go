@@ -7,7 +7,7 @@ import (
 )
 
 func TestNextTokenBasic(t *testing.T) {
-	input := `=+(){},;!-/*5<>[]==<=>=`
+	input := `=+(){},;!-/*5<>[]==<=>=:=::`
 
 	tests := []struct {
 		expectedType    token.TokenType
@@ -33,6 +33,8 @@ func TestNextTokenBasic(t *testing.T) {
 		{token.EQ, "=="},
 		{token.LEQ, "<="},
 		{token.GEQ, ">="},
+		{token.DEFINE, ":="},
+		{token.CONST, "::"},
 	}
 
 	l := New(input)
@@ -53,14 +55,14 @@ func TestNextTokenBasic(t *testing.T) {
 
 func TestNextTokenComplex(t *testing.T) {
 	input := `
-let five = 5;
-let ten = 10;
+five = 5;
+ten := 10;
 
-let add = fn(x, y) {
+add :: fn(x, y) {
 	x + y;
 };
 
-let result = add("five", ten);
+result :: add("five", ten);
 
 if (5 < 10) {
 	return true;
@@ -78,21 +80,18 @@ if (5 < 10) {
 		expectedType    token.TokenType
 		expectedLiteral string
 	}{
-		{token.LET, "let"},
 		{token.IDENT, "five"},
 		{token.ASSIGN, "="},
 		{token.INT, "5"},
 		{token.SEMICOLON, ";"},
 
-		{token.LET, "let"},
 		{token.IDENT, "ten"},
-		{token.ASSIGN, "="},
+		{token.DEFINE, ":="},
 		{token.INT, "10"},
 		{token.SEMICOLON, ";"},
 
-		{token.LET, "let"},
 		{token.IDENT, "add"},
-		{token.ASSIGN, "="},
+		{token.CONST, "::"},
 		{token.FUNCTION, "fn"},
 		{token.LPAREN, "("},
 		{token.IDENT, "x"},
@@ -107,9 +106,8 @@ if (5 < 10) {
 		{token.RBRACE, "}"},
 		{token.SEMICOLON, ";"},
 
-		{token.LET, "let"},
 		{token.IDENT, "result"},
-		{token.ASSIGN, "="},
+		{token.CONST, "::"},
 		{token.IDENT, "add"},
 		{token.LPAREN, "("},
 		{token.STRING, "five"},

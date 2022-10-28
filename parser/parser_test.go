@@ -310,30 +310,22 @@ func TestReturnStatements(t *testing.T) {
 	}
 }
 
-func TestLetStatements(t *testing.T) {
+func TestAssignment(t *testing.T) {
 	tests := []struct {
-		input              string
-		expectedIdentifier string
-		expectedValue      interface{}
+		input    string
+		expected string
 	}{
-		{"let x = 5;", "x", 5},
-		{"let y = true;", "y", true},
-		{"let z = a;", "z", "a"},
+		{"foo := 3", "foo := 3"},
+		{"bar = 4", "bar = 4"},
 	}
 
-	for _, tt := range tests {
-		program := testParse(t, tt.input)
+	for i, tt := range tests {
+		prog := testParse(t, tt.input)
+		assertStatementsLen(t, prog.Statements, 1)
+		stmt := assertExpressionStatement(t, prog.Statements[0])
 
-		assertStatementsLen(t, program.Statements, 1)
-
-		stmt := program.Statements[0]
-		if !testLetStatement(t, stmt, tt.expectedIdentifier) {
-			return
-		}
-
-		val := stmt.(*ast.LetStatement).Value
-		if !testLiteralExpression(t, val, tt.expectedValue) {
-			return
+		if stmt.Expression.String() != tt.expected {
+			t.Errorf("[%d] wrong expression; expected %q, got %q", i, tt.expected, stmt.Expression.String())
 		}
 	}
 }
@@ -525,25 +517,6 @@ func testLiteralExpression(t *testing.T, exp ast.Expression, expected interface{
 		t.Errorf("type of exp not handled, got %T", exp)
 		return false
 	}
-}
-
-func testLetStatement(t *testing.T, s ast.Statement, name string) bool {
-	if s.TokenLiteral() != "let" {
-		t.Errorf("s.TokenLiteral not 'let'; got %q", s.TokenLiteral())
-		return false
-	}
-
-	letStmt, ok := s.(*ast.LetStatement)
-	if !ok {
-		t.Errorf("s not *ast.LetStatement; got %T", s)
-		return false
-	}
-
-	if !testIdentifier(t, letStmt.Name, name) {
-		return false
-	}
-
-	return true
 }
 
 func testInfixExpression(t *testing.T, exp ast.Expression, left interface{}, operator string, right interface{}) bool {

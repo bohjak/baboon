@@ -28,22 +28,27 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 	switch node := node.(type) {
 	case *ast.Program:
 		return evalProgram(node.Statements, env)
+
 	case *ast.BlockStatement:
 		return evalBlockStatement(node.Statements, env)
+
 	case *ast.ExpressionStatement:
 		return Eval(node.Expression, env)
+
 	case *ast.ReturnStatement:
 		val := Eval(node.Value, env)
 		if val.Type() == object.ERROR_OBJ {
 			return val
 		}
 		return &object.Return{Value: val}
+
 	case *ast.PrefixExpression:
 		right := Eval(node.Right, env)
 		if right.Type() == object.ERROR_OBJ {
 			return right
 		}
 		return evalPrefixExpression(node.Operator, right, &node.Token)
+
 	case *ast.InfixExpression:
 		left := Eval(node.Left, env)
 		if left.Type() == object.ERROR_OBJ {
@@ -54,28 +59,26 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 			return right
 		}
 		return evalInfixExpression(node.Operator, left, right, &node.Token)
+
 	case *ast.IfExpression:
 		cond := Eval(node.Condition, env)
 		if cond.Type() == object.ERROR_OBJ {
 			return cond
 		}
 		return evalIfExpression(cond, node.Consequence, node.Alternative, env, &node.Token)
+
 	case *ast.IntegerLiteral:
 		return &object.Integer{Value: node.Value}
+
 	case *ast.StringLiteral:
 		return &object.String{Value: node.Value}
+
 	case *ast.Boolean:
 		return newBoolean(node.Value)
-	case *ast.LetStatement:
-		if _, ok := env.Get(node.Name.Value); ok {
-			return newError(&node.Token, fmt.Sprintf("identifier already assigned: %s", node.Name.Value))
-		}
-		// TODO: switch to lazy evaluation?
-		val := Eval(node.Value, env)
-		if val.Type() == object.ERROR_OBJ {
-			return val
-		}
-		return env.Set(node.Name.Value, val)
+
+	case *ast.AssignExpression:
+		return evalAssignExpression(node, env)
+
 	case *ast.Identifier:
 		if val, ok := env.Get(node.Value); ok {
 			return val
@@ -84,11 +87,12 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 			return builtin
 		}
 		return newError(&node.Token, fmt.Sprintf("identifier not found: %s", node.Value))
-	// TODO: add assignment
+
 	case *ast.FunctionExpression:
 		params := node.Parameters
 		body := node.Body
 		return &object.Function{Parameters: params, Body: body, Env: env}
+
 	case *ast.CallExpression:
 		fn := Eval(node.Function, env)
 		if fn.Type() == object.ERROR_OBJ {
@@ -101,6 +105,7 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 		}
 
 		return applyFunction(fn, args, &node.Token)
+
 	case *ast.ArrayLiteral:
 		items := evalExpressions(node.Items, env)
 		if len(items) == 1 && items[0].Type() == object.ERROR_OBJ {
@@ -108,6 +113,7 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 		}
 
 		return &object.ArrayLiteral{Items: items}
+
 	case *ast.AccessExpression:
 		arr := Eval(node.Array, env)
 		if arr.Type() == object.ERROR_OBJ {
@@ -120,10 +126,10 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 		}
 
 		return evalAccessExpression(arr, key, &node.Token)
+
 	default:
-		// return newError(node.Token, fmt.Sprintf("unknown node: [%T] %v", node, node))
 		// FIXME: add Token() to ast.Node interface
-		return nil
+		return &object.Error{Message: fmt.Sprintf("unknown node: [%T] %v", node, node)}
 	}
 }
 
@@ -328,5 +334,34 @@ func evalArrayIndexExpression(arr object.Object, key object.Object, token *token
 		return items[idx]
 	default:
 		return newError(token, fmt.Sprintf("invalid argument: index %d out of bounds", idx))
+	}
+}
+
+func evalAssignExpression(node *ast.AssignExpression, env *object.Environment) object.Object {
+	_, declared := env.Get(node.Name.Value)
+
+	if node.Token.Type == token.ASSIGN {
+		if !declared {
+			return newError(&node.Token, fmt.Sprintf("assigning to undeclared variable: %s", node.Name.Value))
+		}
+		if env.IsConst(node.Name.Value) {
+			return newError(&node.Token, fmt.Sprintf("assigning to const: %s", node.Name.Value))
+		}
+	} else {
+		if declared {
+			return newError(&node.Token, fmt.Sprintf("identifier already declared: %s", node.Name.Value))
+		}
+	}
+
+	// TODO: switch to lazy evaluation?
+	val := Eval(node.Value, env)
+	if val.Type() == object.ERROR_OBJ {
+		return val
+	}
+
+	if node.Token.Type == token.CONST {
+		return env.SetConst(node.Name.Value, val)
+	} else {
+		return env.Set(node.Name.Value, val)
 	}
 }

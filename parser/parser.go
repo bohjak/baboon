@@ -49,6 +49,9 @@ func New(l *lexer.Lexer) *Parser {
 	p.infixParseFns[token.GEQ] = p.parseInfixExpression
 	p.infixParseFns[token.LPAREN] = p.parseCallExpression
 	p.infixParseFns[token.LBRACKET] = p.parseAccessExpression
+	p.infixParseFns[token.DEFINE] = p.parseAssignExpression
+	p.infixParseFns[token.ASSIGN] = p.parseAssignExpression
+	p.infixParseFns[token.CONST] = p.parseAssignExpression
 
 	// Read two tokens to set both curToken and peekToken
 	p.nextToken()
@@ -95,8 +98,6 @@ func (p *Parser) ParseProgram() *ast.Program {
 
 func (p *Parser) parseStatement() (ast.Statement, bool) {
 	switch p.curToken.Type {
-	case token.LET:
-		return p.parseLetStatement()
 	case token.RETURN:
 		return p.parseReturnStatement()
 	case token.LBRACE:
@@ -104,34 +105,6 @@ func (p *Parser) parseStatement() (ast.Statement, bool) {
 	default:
 		return p.parseExpressionStatement()
 	}
-}
-
-func (p *Parser) parseLetStatement() (*ast.LetStatement, bool) {
-	stmt := &ast.LetStatement{Token: p.curToken}
-
-	if !p.expectPeek(token.IDENT) {
-		return nil, false
-	}
-
-	stmt.Name = &ast.Identifier{Token: p.curToken, Value: p.curToken.Literal}
-
-	if !p.expectPeek(token.ASSIGN) {
-		return nil, false
-	}
-	p.nextToken()
-
-	value := p.parseExpression(LOWEST)
-	if value == nil {
-		return nil, false
-	}
-
-	stmt.Value = value
-
-	if p.peekToken.Type == token.SEMICOLON {
-		p.nextToken()
-	}
-
-	return stmt, true
 }
 
 func (p *Parser) parseReturnStatement() (*ast.ReturnStatement, bool) {
@@ -441,6 +414,31 @@ func (p *Parser) parseExpressionsList(end token.TokenType) []ast.Expression {
 	return exps
 }
 
+func (p *Parser) parseAssignExpression(left ast.Expression) ast.Expression {
+	exp := &ast.AssignExpression{Token: p.curToken}
+
+	name, ok := left.(*ast.Identifier)
+	if !ok {
+		// TODO: improve
+		msg := "cannot assign to not an identifier"
+		p.errors = append(p.errors, msg)
+		return nil
+	}
+
+	p.nextToken()
+	value := p.parseExpression(LOWEST)
+	if value == nil {
+		msg := "couldn't parse assigned expression"
+		p.errors = append(p.errors, msg)
+		return nil
+	}
+
+	exp.Name = name
+	exp.Value = value
+
+	return exp
+}
+
 type (
 	prefixParseFn func() ast.Expression
 	infixParseFn  func(ast.Expression) ast.Expression
@@ -449,6 +447,7 @@ type (
 const (
 	_ int = iota
 	LOWEST
+	ASSIGN      // = := ::
 	EQUALS      // ==
 	LESSGREATER // < >
 	SUM         // +
@@ -458,6 +457,9 @@ const (
 )
 
 var precedences = map[token.TokenType]int{
+	token.ASSIGN:   ASSIGN,
+	token.DEFINE:   ASSIGN,
+	token.CONST:    ASSIGN,
 	token.EQ:       EQUALS,
 	token.NEQ:      EQUALS,
 	token.LT:       LESSGREATER,

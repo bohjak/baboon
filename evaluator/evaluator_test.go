@@ -50,7 +50,7 @@ func TestEvalStringExpression(t *testing.T) {
 		expected string
 	}{
 		{`"Hello, world!"`, "Hello, world!"},
-		{`let name = "Zalgo"; "My name is" + " " + name`, "My name is Zalgo"},
+		{`name :: "Zalgo"; "My name is" + " " + name`, "My name is Zalgo"},
 		{`if ("a" == "a") { "true" }`, "true"},
 		{`if ("a" != "b") { "true" }`, "true"},
 	}
@@ -136,10 +136,10 @@ func TestReturnStatement(t *testing.T) {
 		{`
 if (true) {
 	if (true) {
-		return 3;
+		return 3
 	}
 
-	return 4;
+	return 4
 }
 		`, 3},
 		{"if (false) {!1} else {1}", 1},
@@ -164,9 +164,10 @@ func TestError(t *testing.T) {
 		{"3 - true + 4", "type mismatch: INTEGER - BOOLEAN"},
 		{"if (!!1) {true}", "unknown operator: !INTEGER"},
 		{"true >= false", "unknown operator: BOOLEAN >= BOOLEAN"},
-		{"let a = if (true) {return -false}", "unknown operator: -BOOLEAN"},
+		{"a :: if (true) {return -false}", "unknown operator: -BOOLEAN"},
 		{"foo", "identifier not found: foo"},
-		{"let a = 1; let a = 2", "identifier already assigned: a"},
+		{"a :: 1; a :: 2", "identifier already declared: a"},
+		{"b := 1; b := 2", "identifier already declared: b"},
 		{`"hello" + 42`, "type mismatch: STRING + INTEGER"},
 		{`"a" < "b"`, "unknown operator: STRING < STRING"},
 		{"[][3]", "invalid argument: index 3 out of bounds"},
@@ -175,6 +176,8 @@ func TestError(t *testing.T) {
 		{"[1, 2][true]", "invalid argument: ARRAY[BOOLEAN]"},
 		{"if 1 {2}", "non-boolean condition in IF expression: INTEGER"},
 		{"if if false {} {}", "non-boolean condition in IF expression: VOID"},
+		{"foo = 42", "assigning to undeclared variable: foo"},
+		{"c :: 333; c = 123", "assigning to const: c"},
 	}
 
 	for i, tt := range tests {
@@ -188,10 +191,10 @@ func TestBinding(t *testing.T) {
 		input    string
 		expected int64
 	}{
-		{"let a = 5;", 5},
-		{"let a = 5; a", 5},
-		{"let a = 6; let b = 6 * 6; b", 36},
-		{"let a = 3; let b = 4; a + b", 7},
+		{"a :: 5;", 5},
+		{"a :: 5; a", 5},
+		{"a :: 6; b :: 6 * 6; b", 36},
+		{"a :: 3; b :: 4; a + b", 7},
 	}
 
 	for i, tt := range tests {
@@ -221,13 +224,13 @@ func TestCallExpression(t *testing.T) {
 		input    string
 		expected int64
 	}{
-		{"let id = fn(x) { x }; id(42)", 42},
-		{"let id = fn(x) { return x }; id(42)", 42},
-		{"let mul = fn(a, b) { a * b }; mul(3, 4)", 12},
-		{"let apply = fn(x, cb) { cb(x) }; let sqr = fn(n) { n * n }; apply(8, sqr)", 64},
-		{"let add = fn(a, b) { a + b }; add(add(1, 2), fn(n) {n / 2}(10))", 8},
-		{"let foo = 1; let bar = fn(foo) { foo + 2 }; bar(3)", 5},
-		{"let newAdder = fn(x) {fn(y) {x + y}}; let addTwo = newAdder(2); addTwo(8)", 10},
+		{"id :: fn(x) { x }; id(42)", 42},
+		{"id :: fn(x) { return x }; id(42)", 42},
+		{"mul :: fn(a, b) { a * b }; mul(3, 4)", 12},
+		{"apply :: fn(x, cb) { cb(x) }; sqr :: fn(n) { n * n }; apply(8, sqr)", 64},
+		{"add :: fn(a, b) { a + b }; add(add(1, 2), fn(n) {n / 2}(10))", 8},
+		{"foo :: 1; bar :: fn(foo) { foo + 2 }; bar(3)", 5},
+		{"newAdder :: fn(x) {fn(y) {x + y}}; addTwo :: newAdder(2); addTwo(8)", 10},
 	}
 
 	for i, tt := range tests {
@@ -252,27 +255,27 @@ func TestBuiltin(t *testing.T) {
 		{`len([])`, 0},
 		{`len(tail([]))`, 0},
 		{`
-let map = fn(arr, f) {
-	let aux = fn(acc, arr) {
+			map :: fn(arr, f) {
+			aux :: fn(acc, arr) {
 		if len(arr) == 0 {
-			return acc;
+			return acc
 		}
-		aux(append(acc, f(first(arr))), tail(arr));
-	};
+		aux(append(acc, f(first(arr))), tail(arr))
+	}
 	aux([], arr)
-};
+}
 
-let sum = fn(arr) {
-	let aux = fn(acc, arr) {
+			sum :: fn(arr) {
+			aux :: fn(acc, arr) {
 		if len(arr) == 0 {
 			return acc
 		}
 		aux(acc + first(arr), tail(arr))
-	};
+	}
 	aux(0, arr)
-};
+}
 
-let ns = [1, 2, 3, 4, 5]
+			ns :: [1, 2, 3, 4, 5]
 sum(map(ns, fn(n) {n * 2}))
 		`, 30},
 	}
@@ -328,8 +331,8 @@ func TestArrayAccess(t *testing.T) {
 	}{
 		{`[0, 1, 2, 3][2]`, 2},
 		{`[42, "abc", true][1]`, "abc"},
-		{`let arr = [true, false]; arr[0]`, true},
-		{`let foo = [fn(bar) { len(bar) }]; foo[0]("12345")`, 5},
+		{`arr :: [true, false]; arr[0]`, true},
+		{`foo :: [fn(bar) { len(bar) }]; foo[0]("12345")`, 5},
 		{`[3, 2, 1][-2]`, 2},
 	}
 
@@ -344,6 +347,22 @@ func TestArrayAccess(t *testing.T) {
 		case bool:
 			testBooleanObject(t, i, eval, expected)
 		}
+	}
+}
+
+func TestAssignment(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected int64
+	}{
+		{"a :: 1", 1},
+		{"a := 2", 2},
+		{"a :: b := 3; a + b", 6},
+		{"a := 4; a = 5", 5},
+	}
+
+	for i, tt := range tests {
+		testIntegerObject(t, i, testEval(tt.input), tt.expected)
 	}
 }
 
